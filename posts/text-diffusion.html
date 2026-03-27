@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-Guided Image Generation with Prompt-to-Prompt Editing | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">Image Editing</span>
+                <h1>Text-Guided Image Generation with Prompt-to-Prompt Editing</h1>
+                <p class="blog-post-meta">February 15, 2026 &middot; Hertz et al. (ICLR 2023)</p>
+            </div>
+
+            <div class="blog-post-content">
+                <h2>Motivation</h2>
+                <p>In previous discussions, we covered how diffusion models denoise step by step — taking a noisy image xₜ and timestep t, predicting noise εθ. We briefly mentioned <strong>cross-attention</strong> as the "bridge" for text conditioning. This post goes full depth into how and why text can guide image generation, covering <strong>CLIP</strong>, <strong>cross-attention mechanics</strong>, <strong>DAAM visualization</strong>, and <strong>Prompt-to-Prompt editing</strong>.</p>
+
+                <h2>CLIP: Turning Words into Useful Numbers</h2>
+                <h3>The Problem Before CLIP</h3>
+                <p>Neural networks only understand numbers, not words. We need to convert "A cute cat on grass" into a matrix of numbers that carry <strong>visual meaning</strong>. Simple approaches like one-hot encoding fail: the distance between "cat" and "dog" is the same as between "cat" and "airplane" — the model can't learn that semantically similar concepts should be close together.</p>
+
+                <h3>How CLIP Works</h3>
+                <p><strong>CLIP</strong> (Contrastive Language-Image Pre-training) was trained by OpenAI on 400 million image-text pairs. It has two encoders trained together:</p>
+                <ul>
+                    <li><strong>Image Encoder (ViT):</strong> image → vector</li>
+                    <li><strong>Text Encoder (Transformer):</strong> sentence → vector</li>
+                </ul>
+
+                <p>Training uses <strong>contrastive learning</strong>: take a batch of 32,768 image-text pairs, maximize similarity for matching pairs while minimizing it for non-matching ones. CLIP uses <strong>cosine similarity</strong> (measuring angle between vectors) rather than Euclidean distance, scaled by a learnable temperature parameter.</p>
+
+                <h3>The CLIP Text Encoder Output</h3>
+                <p>In diffusion models, we only use the Text Encoder (the Image Encoder is discarded). The process: tokenize the prompt into 77 tokens → embed each token as a 768-d vector → pass through 12 Transformer layers where tokens interact through self-attention. "Cute" learns it describes "cat," not "grass." The result is a 77×768 matrix where each token carries context-aware semantic meaning.</p>
+
+                <p><strong>Freezing CLIP is smart</strong> — it was already trained on 400M pairs and understands visual concepts. Training from scratch would require much more data and time, and poor early representations could hurt diffusion model training.</p>
+
+                <h2>Cross-Attention: The Full Depth</h2>
+                <p>Cross-attention is the mechanism by which each pixel "asks" the text tokens: "Which words are relevant to me?"</p>
+
+                <h3>Step 1: Creating Q, K, V</h3>
+                <ul>
+                    <li><strong>Query (Q):</strong> From image features — each pixel creates a "question vector" encoding what information it needs</li>
+                    <li><strong>Key (K):</strong> From text features — each word creates an "identity tag"</li>
+                    <li><strong>Value (V):</strong> From text features — each word creates a "content package" with the actual information to transfer</li>
+                </ul>
+
+                <h3>Step 2: Computing Similarity</h3>
+                <p>S = Q · K<sup>T</sup>, producing a matrix of shape H×W×77. Each entry S[i,j] is the dot product between pixel i's query and word j's key. High value means they're relevant to each other.</p>
+
+                <h3>Step 3: SoftMax Normalization</h3>
+                <p>A = softmax(QK<sup>T</sup>/√d). Dividing by √d prevents extremely large values that cause vanishing gradients. SoftMax converts raw scores into probability weights that sum to 1 for each pixel.</p>
+
+                <h3>Step 4: Collecting Information</h3>
+                <p>Output = A · V. For a center pixel in a "cute cat on grass" image:</p>
+                <blockquote>Output<sub>center</sub> = 0.01·V<sub>"A"</sub> + 0.04·V<sub>"cute"</sub> + 0.82·V<sub>"cat"</sub> + 0.02·V<sub>"on"</sub> + 0.11·V<sub>"grass"</sub></blockquote>
+                <p>The center pixel now carries 82% "cat" information. The correct mapping is learned purely from the denoising loss — no explicit labels needed.</p>
+
+                <h3>Multi-Head Attention</h3>
+                <p>One attention head learns one type of relationship. But text-to-image has many: object identity ("cat" maps to cat pixels), color ("red" maps to red regions), spatial relations ("on" connects objects). <strong>8 parallel attention heads</strong> each specialize in different relationship types.</p>
+
+                <h2>DAAM: Opening the Black Box</h2>
+                <p><strong>DAAM</strong> (Diffusion Attentive Attribution Maps) aggregates ~2,400 attention maps (from multiple layers, timesteps, and heads) into one clean heatmap per word.</p>
+
+                <p>The process: (1) Extract attention maps at every timestep and cross-attention layer, (2) Upscale all maps to the same resolution, (3) Average across all timesteps, layers, and heads, (4) Normalize to [0,1].</p>
+
+                <p>Key findings from DAAM:</p>
+                <ul>
+                    <li>Heatmaps correctly show spatial attribution (e.g., "dog" lights up over the dog region, "book" over the book)</li>
+                    <li>Adjectives bind to their nouns ("fluffy" overlaps with "cat")</li>
+                    <li>Verbs activate interaction regions ("reading" lights up between dog and book)</li>
+                    <li>Early timesteps have coarse attention (global structure), late timesteps have sharp attention (fine details)</li>
+                </ul>
+
+                <h2>Prompt-to-Prompt: Text-Only Image Editing</h2>
+                <p>The core problem: even a small modification of the text prompt leads to a <strong>completely different image</strong>. Prompt-to-Prompt solves this by manipulating cross-attention maps during generation.</p>
+
+                <h3>The Algorithm</h3>
+                <ol>
+                    <li>Run denoising for both source and target prompts simultaneously (same initial noise)</li>
+                    <li>At each timestep: extract attention maps from both, compute an edited map, and override the target's attention</li>
+                </ol>
+
+                <h3>Word Swap</h3>
+                <p>Generate "a cat sitting on a bench" → save all attention maps. Change to "a dog sitting on a bench" → force the model to reuse the saved spatial layout maps. Result: a dog appears in the exact same pose and position as the cat. <strong>Proof: the attention map determines spatial layout.</strong></p>
+
+                <h3>Attention Re-weighting</h3>
+                <p>Multiply the attention column for a specific word by a scalar. For "a fluffy cat" — increasing the weight of "fluffy" makes the cat increasingly fluffy. The token position is deterministic (always at the same index), so we can precisely target individual words.</p>
+
+                <h2>Conclusion</h2>
+                <p>This chain of technologies — CLIP for encoding text into visually meaningful representations, cross-attention for fusing text with image features, DAAM for visualization and validation, and Prompt-to-Prompt for practical editing — demonstrates that <strong>text genuinely controls pixel generation</strong> through attention mechanisms. P2P shows that by injecting or manipulating attention maps, we can achieve intuitive, text-only image editing without masks, fine-tuning, or optimization.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

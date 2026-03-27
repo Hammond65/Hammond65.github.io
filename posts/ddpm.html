@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDPM: Denoising Diffusion Probabilistic Models | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">Diffusion Models</span>
+                <h1>Denoising Diffusion Probabilistic Models (DDPM)</h1>
+                <p class="blog-post-meta">March 15, 2026 &middot; Based on Ho, Jain &amp; Abbeel (NeurIPS 2020)</p>
+            </div>
+
+            <div class="blog-post-content">
+                <h2>Introduction</h2>
+                <p>Diffusion models belong to a family called <strong>Generative Models</strong>. The shared goal across all generative models is to learn the underlying distribution of real data — such as images — so that we can sample new, realistic data points from that distribution. However, each approach takes a fundamentally different mathematical route.</p>
+
+                <p><strong>GANs</strong> (Generative Adversarial Networks) use two competing neural networks. <strong>VAEs</strong> (Variational Autoencoders) encode data into a latent space and decode back. <strong>Flow-based models</strong> use invertible transformations for exact likelihood computation. And <strong>Diffusion Models</strong> — the focus here — take a unique approach: gradually adding noise to data, then learning to reverse that process.</p>
+
+                <p>Today, diffusion models power some of the most impressive AI applications: image-to-image translation, text-to-image generation (Stable Diffusion, DALL-E), and even image-to-video generation.</p>
+
+                <h2>The Forward Diffusion Process</h2>
+                <p>The forward process starts with a real data sample <strong>x₀</strong> drawn from the true data distribution. We then gradually add small amounts of Gaussian noise over <strong>T timesteps</strong>. At each step t, we define a conditional distribution:</p>
+
+                <blockquote>q(xₜ | xₜ₋₁) = N(xₜ; √(1-βₜ) · xₜ₋₁, βₜI)</blockquote>
+
+                <p>The noise level is controlled by a <strong>variance schedule {βₜ ∈ (0,1)}</strong>. As t increases, the original data loses its features — first the fine textures disappear, then the edges, then the shapes — until eventually xₜ becomes indistinguishable from pure Gaussian noise.</p>
+
+                <h3>The Reparameterization Trick</h3>
+                <p>A critical efficiency insight: we don't need to simulate every step sequentially. Using the reparameterization trick, we can jump directly to any timestep t:</p>
+                <blockquote>xₜ = √(ᾱₜ) · x₀ + √(1 - ᾱₜ) · ε</blockquote>
+                <p>where ᾱₜ is the cumulative product of αᵢ = 1 - βᵢ, and ε is standard Gaussian noise. This lets us efficiently create training samples at any noise level.</p>
+
+                <h3>Training Objective</h3>
+                <p>The purpose of the forward process is to train a neural network to <strong>predict the noise</strong> inside an image. We take a clean image, add noise to create xₜ, feed it into the network, and the network predicts the noise that was injected. The loss is simply <strong>Mean Squared Error</strong> between predicted and actual noise.</p>
+
+                <h2>The Reverse Diffusion Process</h2>
+                <p>The reverse process is where image generation actually happens. Starting from pure noise, we gradually reconstruct a realistic image. We train a neural network <strong>pθ</strong> to approximate the reverse conditional probabilities:</p>
+
+                <blockquote>pθ(xₜ₋₁ | xₜ) = N(xₜ₋₁; μθ(xₜ, t), Σθ(xₜ, t))</blockquote>
+
+                <p>In practice: feed a noisy image xₜ into the pretrained network, get the predicted noise, compute the predicted clean image, add back a controlled amount of noise, and obtain xₜ₋₁. Repeat until we reach x₀.</p>
+
+                <h2>Why Diffusion Models Avoid Blurry Results</h2>
+                <p>This is one of the most important questions. MSE loss typically produces blurry results in autoencoders and super-resolution networks. Yet diffusion models, using the same MSE loss, produce sharp images. Why?</p>
+
+                <h3>Two Key Insights</h3>
+                <ol>
+                    <li><strong>Predicting noise forces the model to learn high-frequency details.</strong> Gaussian noise is pure high-frequency content. The model must distinguish between random noise and real texture details like fur, skin pores, or fabric patterns. This prevents the model from ignoring fine details.</li>
+                    <li><strong>Multiple timesteps decompose uncertainty.</strong> At early stages (t ≈ 999), all fine details are destroyed — the model only needs to decide the large-scale structure (where the cat is, what direction it faces). At late stages (t ≈ 1), the structure is already fixed — the model only needs to add fine texture details. Each step has a well-defined, low-ambiguity task.</li>
+                </ol>
+
+                <p>Together, these two components prevent the "one-to-many" averaging problem that causes blurriness in direct prediction architectures.</p>
+
+                <h2>Noise Schedule &amp; Efficient Sampling</h2>
+                <h3>Linear vs. Cosine Schedule</h3>
+                <p>The original DDPM used a <strong>linear schedule</strong> — increasing β linearly. The flaw: the signal drops to near zero very quickly (around t = 0.4), meaning the last 40% of training steps are wasted on pure noise. The <strong>cosine schedule</strong> (Nichol &amp; Dhariwal) uses a cosine function to smooth the curve, ensuring a more gradual transition and better utilization of all timesteps.</p>
+
+                <h3>Resolution Matters</h3>
+                <p>Higher-resolution images have more redundancy. The same noise injection heavily corrupts a 64×64 image but barely affects a 1024×1024 image. This means noise schedules need to be adjusted for different resolutions.</p>
+
+                <h3>Faster Sampling: DDIM &amp; Euler</h3>
+                <p><strong>DDIM</strong> (Denoising Diffusion Implicit Models) transforms the stochastic process into a deterministic mapping — the same initial noise always produces the same image. It proved we can generate high-quality images in just 50 steps instead of 1000. <strong>Euler</strong> schedulers have become the default for state-of-the-art models, offering yet more efficient sampling.</p>
+
+                <h2>Architecture Evolution: LDM → DiT</h2>
+                <h3>Latent Diffusion Models (LDM)</h3>
+                <p>Instead of running diffusion on raw pixels, LDM operates in a <strong>compressed latent space</strong> using a VQ-GAN encoder-decoder. This reduces the computational complexity by a factor of ~8, making high-resolution generation feasible on consumer GPUs. The U-Net backbone is augmented with <strong>cross-attention</strong> mechanisms to incorporate text conditioning from CLIP.</p>
+
+                <h3>Diffusion Transformer (DiT)</h3>
+                <p>DiT replaces the U-Net entirely with a standard <strong>Vision Transformer (ViT)</strong>. The motivation: U-Nets are architecturally complex with downsampling, upsampling, skip connections, and convolutional biases. Transformers offer a simpler, more scalable architecture. Key innovations include:</p>
+                <ul>
+                    <li><strong>Patchify:</strong> Divides the latent input into non-overlapping patches, creating token sequences for the transformer.</li>
+                    <li><strong>AdaLN-Zero:</strong> Uses adaptive Layer Normalization to inject timestep and label conditioning, avoiding the need for separate cross-attention layers.</li>
+                    <li><strong>Zero initialization:</strong> Output MLP weights start at zero, preventing random conditioning signals from disrupting early training.</li>
+                </ul>
+
+                <h3>MultiModal-DiT (MM-DiT)</h3>
+                <p>The architecture behind Stable Diffusion 3.5, MM-DiT processes image and text in separate streams with <strong>Joint Attention</strong> — allowing image tokens and text tokens to attend to each other directly, while maintaining separate processing paths for everything else.</p>
+
+                <h2>Practical Extensions</h2>
+                <h3>LoRA (Low-Rank Adaptation)</h3>
+                <p>Full fine-tuning of diffusion models is expensive (2-4GB per style). LoRA exploits the insight that weight updates have a <strong>low intrinsic rank</strong> — the necessary changes can be represented by two small matrices. This enables efficient fine-tuning with minimal additional parameters.</p>
+
+                <h3>ControlNet</h3>
+                <p>A plug-and-play module that adds structural control (edge maps, depth maps, pose skeletons) to text-to-image generation by creating a trainable copy of the encoder with zero convolutions.</p>
+
+                <h2>Conclusion</h2>
+                <p>The evolution of Diffusion Models represents a fundamental shift in generative AI. Unlike GANs, they offer <strong>stable training</strong> with a simple MSE objective. The progression from pixel-space DDPM to latent-space LDM to transformer-based DiT has made high-quality generation increasingly accessible and scalable. Combined with conditioning mechanisms like cross-attention, LoRA for efficient fine-tuning, and ControlNet for spatial control, diffusion models have become the backbone of modern generative AI.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MimicMotion: High-Quality Human Motion Video Generation | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">Video Generation</span>
+                <h1>MimicMotion: High-Quality Human Motion Video Generation with Confidence-Aware Pose Guidance</h1>
+                <p class="blog-post-meta">March 5, 2026 &middot; Zhang et al. (ICML 2025)</p>
+            </div>
+
+            <div class="blog-post-content">
+                <h2>What is Pose-Guided Video Generation?</h2>
+                <p><strong>Pose-guided video generation</strong> takes a static reference image and makes it move according to pose sequences extracted from a driving video. The concept is straightforward: extract a person's body pose (position and movements) from a video, then use that pose information to guide the reference image into motion.</p>
+
+                <p>The four main goals are: <strong>Motion Transfer</strong> (copy movements from a video to a still photo), <strong>Identity Preservation</strong> (keep the original appearance and clothing), <strong>Realistic Animation</strong> (smooth, natural-looking motion), and <strong>Flexible Control</strong> (no complex 3D modeling or motion capture needed).</p>
+
+                <h2>Background: Key Components</h2>
+
+                <h3>DWPose: Whole-Body Pose Estimation</h3>
+                <p>Before guiding video generation with poses, we need to extract them accurately. <strong>DWPose</strong> (ICCV 2023) detects 133 whole-body keypoints: 17 body, 6 feet, 68 face, and 42 hand points. It solves the problem of existing models like OpenPose being either slow or inaccurate on fine-grained details. Using knowledge distillation, a lightweight "student" model learns to outperform a heavy "teacher" model.</p>
+
+                <h3>AnimateAnyone: The Baseline</h3>
+                <p>AnimateAnyone is a fundamental baseline for pose-guided generation built on Stable Diffusion. Its architecture has three components: a <strong>Denoising UNet</strong> (with 2D convolution, spatial, cross, and temporal attention), a <strong>ReferenceNet</strong> (identical framework without temporal layers), and a <strong>Pose Guider</strong>. Training uses two stages — spatial (single frame) then temporal (video sequence). Despite good results, it still shows flickering and background instability.</p>
+
+                <h3>Stable Video Diffusion (SVD)</h3>
+                <p>SVD is an image-to-video generation model built on Stable Diffusion v2.1, modified with <strong>temporal convolution and attention layers</strong> inserted after every spatial layer (adding 656M new parameters, totaling 1.521 billion). It follows a three-stage training pipeline: (I) image pretraining, (II) video pretraining on 152M filtered video clips, and (III) high-quality fine-tuning. SVD generates short 3-4 second videos with realistic motion, but without explicit pose control.</p>
+
+                <h2>MimicMotion's Three Contributions</h2>
+
+                <h3>1. Progressive Latent Fusion for Long Videos</h3>
+                <p>The model is trained on 16-frame clips, limiting inference to short videos. Inspired by <strong>MultiDiffusion</strong> (a training-free panorama generation approach), MimicMotion breaks long videos into smaller overlapping segments and fuses them during denoising in latent space.</p>
+
+                <p>The innovation over simple equal-weight blending: <strong>adaptive weighting based on frame position</strong>. Frames at the center of a segment have more context — they can see both past and future frames through temporal attention. Edge frames have only one-sided context. The weighting follows a bell curve distribution, giving center frames higher weight.</p>
+
+                <p>The "bidirectional context" logic: imagine your video is a loaf of sliced bread. <strong>Spatial attention</strong> looks within one slice (checking consistency within a single frame). <strong>Temporal attention</strong> sticks a skewer through the loaf — looking at the same pixel across all frames. Center frames can look both backwards and forwards; edge frames can only look in one direction.</p>
+
+                <h3>2. Confidence-Aware Pose Guidance</h3>
+                <p>DWPose outputs keypoint locations along with <strong>confidence levels</strong>. The problem: to the video generation model, a keypoint with 0.31 confidence looks identical to one with 0.99 confidence — both are rendered as the same bright line on a black background.</p>
+
+                <p>Standard approaches use binary thresholding (above threshold = draw, below = don't). MimicMotion instead uses confidence as a <strong>continuous weight</strong> fed into the network:</p>
+                <ul>
+                    <li><strong>High Confidence (0.99):</strong> "You MUST put a hand here"</li>
+                    <li><strong>Marginal Confidence (0.35):</strong> "Maybe put a hand here, but if it looks weird, ignore it"</li>
+                </ul>
+                <p>This prevents false-positive keypoints from creating artifacts in the generated video.</p>
+
+                <h3>3. Hand Region Enhancement</h3>
+                <p>Hands occupy only ~10% of image pixels but are crucial for realistic video. Standard loss computation means hands contribute only ~10% to the total loss signal, while body/background dominates at ~90%. The model prioritizes body and neglects hand details.</p>
+
+                <p>MimicMotion's solution: when all hand keypoints exceed the confidence threshold, <strong>multiply the loss weight for hand regions by 10×</strong>. This forces the model to pay more attention to hand quality during training.</p>
+
+                <h2>Implementation Details</h2>
+                <ul>
+                    <li><strong>Dataset:</strong> 4,436 human dancing videos from the internet (avg. 20.1 seconds)</li>
+                    <li><strong>Foundation:</strong> SVD pretrained weights; PoseNet trained from scratch</li>
+                    <li><strong>Training:</strong> 8× A100 GPUs, 20 epochs, batch size 8, 16 frames per clip, learning rate 10⁻⁵</li>
+                </ul>
+
+                <h2>Conclusion</h2>
+                <p>MimicMotion effectively solves the jitter and artifact problems of previous pose-guided models. By combining Stable Video Diffusion with confidence-aware mechanisms and progressive latent fusion, it sets a new state-of-the-art for generating long, smooth, and controllable human motion videos. The practical results demonstrate good temporal stability, minimizing the flickering artifacts commonly seen in earlier approaches.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

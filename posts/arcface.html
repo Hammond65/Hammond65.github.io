@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcFace: Angular Margin Loss for Face Recognition | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">Face Recognition</span>
+                <h1>ArcFace: Additive Angular Margin Loss for Deep Face Recognition</h1>
+                <p class="blog-post-meta">March 10, 2026 &middot; Deng et al. (CVPR 2019)</p>
+            </div>
+
+            <div class="blog-post-content">
+                <h2>Motivation: The Identity Drift Problem</h2>
+                <p>In our project, we use <strong>MimicMotion</strong> (based on Stable Video Diffusion) to generate videos from a single reference image with a sequence of poses. The problem: MimicMotion lacks "face identity" awareness. Frame 1 looks correct, but by frame 10 the nose shape changes, and by frame 20 the face looks like a different person entirely.</p>
+
+                <p>To solve this identity drift, we need two capabilities: (1) a way to <strong>represent a face as numbers</strong> — a compact numerical representation called an embedding that captures identity, and (2) a way to <strong>compare two face representations</strong> and get a similarity score. ArcFace provides both.</p>
+
+                <h2>Face Recognition Background</h2>
+                <h3>A Brief History</h3>
+                <p>Face recognition has evolved dramatically over the decades:</p>
+                <ul>
+                    <li><strong>Eigenfaces (1991):</strong> Used PCA to reduce face images to lower-dimensional space. Simple but not robust to lighting or pose changes.</li>
+                    <li><strong>Fisherfaces (1997):</strong> Improved upon Eigenfaces using LDA for better class separation.</li>
+                    <li><strong>DeepFace (Facebook, 2014):</strong> One of the first deep learning approaches — a 9-layer CNN trained on 4M face images achieving 97.35% on LFW, near human-level (97.53%).</li>
+                    <li><strong>FaceNet (Google, 2015):</strong> Introduced triplet loss for learning face embeddings directly in Euclidean space.</li>
+                </ul>
+
+                <h3>The Face Recognition Pipeline</h3>
+                <ol>
+                    <li><strong>Face Detection:</strong> Locate the face in the image (MTCNN, RetinaFace)</li>
+                    <li><strong>Face Alignment:</strong> Detect 5 facial landmarks and apply similarity transformation to standardize position</li>
+                    <li><strong>Feature Extraction:</strong> CNN processes the aligned face to produce a 512-dimensional embedding — this is where ArcFace contributes</li>
+                    <li><strong>Comparison:</strong> Calculate cosine similarity between embeddings to determine if two faces belong to the same person</li>
+                </ol>
+
+                <h3>What is a Face Embedding?</h3>
+                <p>A face embedding is a vector of <strong>512 numbers</strong> that represents a face's identity — think of it as a numerical fingerprint. It captures identity-related features (face shape, eye spacing, nose size, jawline) and ignores non-identity variations (expression, lighting, angle).</p>
+
+                <h2>From Triplet Loss to SoftMax-Based Methods</h2>
+                <p><strong>Triplet loss</strong> was powerful but problematic. It requires carefully selecting triplets (anchor, positive, negative), and most random triplets are "too easy" — the model already gets them right. Hard negative mining is needed but expensive, and training convergence is slow.</p>
+
+                <p>Researchers shifted to treating each person as a class and training with <strong>SoftMax classification</strong>. This is simpler and more stable, but introduces its own problems.</p>
+
+                <h2>Why SoftMax Falls Short</h2>
+                <ol>
+                    <li><strong>No explicit margin between classes.</strong> SoftMax only requires the correct class score to be the highest. A score barely above the second-best still yields low loss. This doesn't create well-separated embeddings.</li>
+                    <li><strong>Magnitude vs. direction ambiguity.</strong> The dot product W<sup>T</sup>x depends on both magnitude (length) and direction (angle). A sample could get a high score just because its feature vector is long, not because it points in the right direction.</li>
+                </ol>
+
+                <h2>The Foundation: Feature and Weight Normalization</h2>
+                <p>The original logit is W<sub>j</sub><sup>T</sup>x = ||W<sub>j</sub>|| · ||x|| · cos(θ<sub>j</sub>), which depends on three factors. We only want the angle to matter.</p>
+                <ul>
+                    <li><strong>Step 1: Normalize weights</strong> — Force ||W<sub>j</sub>|| = 1 for every class</li>
+                    <li><strong>Step 2: Normalize features</strong> — Force ||x|| = 1, then re-scale by a learnable parameter s</li>
+                </ul>
+                <p>After normalization: W<sub>j</sub><sup>T</sup>x = cos(θ<sub>j</sub>). The logit is now <strong>purely the cosine of the angle</strong> between the feature and the class weight. Only direction matters.</p>
+
+                <h2>The Core: Angular Margin</h2>
+                <p>The key insight of ArcFace is requiring a <strong>safety gap</strong> between the correct class and all wrong classes. Think of two students preparing for an exam — Student A trains to pass at exactly 50% (minimum passing score), while Student B trains to pass at 80%. On exam day, Student B is far more robust.</p>
+
+                <p>ArcFace adds an angular margin m to the angle between the feature and its correct class weight:</p>
+                <blockquote>L = -log(e<sup>s·cos(θ<sub>y</sub> + m)</sup> / (e<sup>s·cos(θ<sub>y</sub> + m)</sup> + Σ e<sup>s·cos(θ<sub>j</sub>)</sup>))</blockquote>
+
+                <p>By adding m to the angle, the correct class must have an even smaller angle (be more aligned) to achieve the same logit value. This forces the network to learn more discriminative features.</p>
+
+                <h2>Training Setup</h2>
+                <ul>
+                    <li><strong>Input:</strong> 112×112 aligned face images</li>
+                    <li><strong>Backbone:</strong> ResNet-100 producing 512-d features</li>
+                    <li><strong>Dataset:</strong> MS1MV2 with 85,742 identities</li>
+                    <li><strong>Output:</strong> 512-dimensional face embedding for each input face</li>
+                </ul>
+
+                <h2>Conclusion</h2>
+                <p>ArcFace provides a clean, geometrically interpretable loss function that creates highly discriminative face embeddings. By operating purely in angular space and enforcing an explicit margin, it achieves state-of-the-art face recognition performance. For our project, ArcFace gives us the tool to measure and enforce facial identity consistency across generated video frames — a critical component for solving the identity drift problem in MimicMotion.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

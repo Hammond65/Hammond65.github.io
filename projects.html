@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects | Hammond Lee</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="blog.html" class="nav-link">Blog</a></li>
+                <li><a href="projects.html" class="nav-link active">Projects</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <h1>Projects</h1>
+        <p>Research projects and applications in AI and computer vision.</p>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="projects-grid">
+                <div class="glass-card project-card fade-in-up">
+                    <h3>Intelligent Painter - Inpainting</h3>
+                    <p>An AI-powered image inpainting application. Upload an image, mask the region you want to edit, and let the model intelligently fill in the missing content with realistic results.</p>
+                    <div class="project-tags">
+                        <span class="project-tag">Image Inpainting</span>
+                        <span class="project-tag">Deep Learning</span>
+                        <span class="project-tag">LaMa</span>
+                    </div>
+                    <a href="https://inpaint.duan2baka.me/" target="_blank" rel="noopener noreferrer" class="project-link">Visit Project</a>
+                </div>
+
+                <div class="glass-card project-card fade-in-up" style="animation-delay: 0.1s;">
+                    <h3>Identity-Preserving Video Generation</h3>
+                    <p>Combining MimicMotion with ConsisID and ArcFace to generate human motion videos that maintain facial identity consistency across frames.</p>
+                    <div class="project-tags">
+                        <span class="project-tag">Video Generation</span>
+                        <span class="project-tag">Face Recognition</span>
+                        <span class="project-tag">Diffusion Models</span>
+                    </div>
+                    <span class="project-link" style="opacity:0.5; cursor:default;">In Progress</span>
+                </div>
+
+                <div class="glass-card project-card fade-in-up" style="animation-delay: 0.2s;">
+                    <h3>Pose-Guided Motion Transfer</h3>
+                    <p>Using MimicMotion built on Stable Video Diffusion with confidence-aware pose guidance to transfer human body movements from a reference video to a static image.</p>
+                    <div class="project-tags">
+                        <span class="project-tag">MimicMotion</span>
+                        <span class="project-tag">SVD</span>
+                        <span class="project-tag">DWPose</span>
+                    </div>
+                    <span class="project-link" style="opacity:0.5; cursor:default;">In Progress</span>
+                </div>
+
+                <div class="glass-card project-card fade-in-up" style="animation-delay: 0.3s;">
+                    <h3>Prompt-to-Prompt Image Editing</h3>
+                    <p>Text-only image editing using cross-attention control in diffusion models. Edit images by modifying text prompts without masks, fine-tuning, or optimization.</p>
+                    <div class="project-tags">
+                        <span class="project-tag">CLIP</span>
+                        <span class="project-tag">Cross-Attention</span>
+                        <span class="project-tag">P2P Editing</span>
+                    </div>
+                    <span class="project-link" style="opacity:0.5; cursor:default;">In Progress</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Manager | Hammond Lee</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="blog.html" class="nav-link">Blog</a></li>
+                <li><a href="projects.html" class="nav-link">Projects</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <h1 class="section-title fade-in-up">Blog Manager</h1>
+        <p class="section-subtitle fade-in-up">Create new blog posts and generate the required files</p>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+        <div class="admin-container">
+
+            <!-- Step 1: Post Metadata -->
+            <div class="glass-card admin-card fade-in-up">
+                <h2>1. Post Details</h2>
+                <div class="form-group">
+                    <label for="postTitle">Title</label>
+                    <input type="text" id="postTitle" placeholder="e.g. My New Research Paper Summary">
+                </div>
+                <div class="form-group">
+                    <label for="postId">Post ID (URL slug)</label>
+                    <input type="text" id="postId" placeholder="e.g. my-new-paper (auto-generated from title)">
+                </div>
+                <div class="form-group">
+                    <label for="postTag">Tag</label>
+                    <input type="text" id="postTag" placeholder="e.g. Diffusion Models">
+                </div>
+                <div class="form-group">
+                    <label for="postDate">Date</label>
+                    <input type="date" id="postDate">
+                </div>
+                <div class="form-group">
+                    <label for="postExcerpt">Excerpt (short description for the blog listing)</label>
+                    <textarea id="postExcerpt" rows="2" placeholder="A brief summary shown on the blog card..."></textarea>
+                </div>
+            </div>
+
+            <!-- Step 2: Content -->
+            <div class="glass-card admin-card fade-in-up">
+                <h2>2. Post Content (HTML)</h2>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Write the body of your blog post using HTML tags. Use &lt;h2&gt; for sections, &lt;h3&gt; for subsections, &lt;p&gt; for paragraphs, &lt;ul&gt;/&lt;li&gt; for lists, and &lt;blockquote&gt; for quotes.
+                </p>
+                <div class="form-group">
+                    <textarea id="postContent" rows="16" placeholder="<h2>Introduction</h2>
+<p>Your content here...</p>
+
+<h2>Method</h2>
+<p>Describe the approach...</p>
+
+<h3>Sub-section</h3>
+<ul>
+    <li>Point one</li>
+    <li>Point two</li>
+</ul>"></textarea>
+                </div>
+            </div>
+
+            <!-- Step 3: Preview -->
+            <div class="glass-card admin-card fade-in-up">
+                <h2>3. Preview</h2>
+                <div class="admin-preview" id="previewArea">
+                    <h3>Live Preview</h3>
+                    <div id="previewContent" class="blog-post-content">
+                        <p style="color: var(--color-text-muted);">Start typing above to see a preview...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Generate -->
+            <div class="glass-card admin-card fade-in-up">
+                <h2>4. Generate Files</h2>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Click to generate the two things you need: (1) the HTML file to save as <code style="color:var(--color-primary)">posts/your-post-id.html</code>, and (2) the entry to add to <code style="color:var(--color-primary)">js/posts-data.js</code>.
+                </p>
+                <button class="btn btn-primary" id="generateBtn" style="width: 100%;">Generate Blog Post</button>
+                <div id="adminMsg" class="admin-msg"></div>
+            </div>
+
+            <!-- Output: posts-data.js entry -->
+            <div class="glass-card admin-card fade-in-up" id="outputDataSection" style="display:none;">
+                <h2>Add to <code style="color:var(--color-primary)">js/posts-data.js</code></h2>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Open <code style="color:var(--color-primary)">js/posts-data.js</code> and add this object <strong>at the top</strong> of the <code>blogPosts</code> array (after the opening <code>[</code>).
+                </p>
+                <div class="form-group">
+                    <textarea id="outputDataEntry" rows="8" readonly style="font-family: monospace; font-size:0.85rem; cursor:text;"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="copyToClipboard('outputDataEntry')" style="width:100%;">Copy to Clipboard</button>
+            </div>
+
+            <!-- Output: HTML file -->
+            <div class="glass-card admin-card fade-in-up" id="outputHtmlSection" style="display:none;">
+                <h2>Save as <code style="color:var(--color-primary)" id="outputFilename">posts/your-post.html</code></h2>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Create a new file with the name shown above and paste this content into it.
+                </p>
+                <div class="form-group">
+                    <textarea id="outputHtml" rows="12" readonly style="font-family: monospace; font-size:0.85rem; cursor:text;"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="copyToClipboard('outputHtml')" style="width:100%;">Copy to Clipboard</button>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+    (function() {
+        const titleEl   = document.getElementById('postTitle');
+        const idEl      = document.getElementById('postId');
+        const tagEl     = document.getElementById('postTag');
+        const dateEl    = document.getElementById('postDate');
+        const excerptEl = document.getElementById('postExcerpt');
+        const contentEl = document.getElementById('postContent');
+        const previewEl = document.getElementById('previewContent');
+        const genBtn    = document.getElementById('generateBtn');
+        const msgEl     = document.getElementById('adminMsg');
+
+        // Set default date to today
+        dateEl.value = new Date().toISOString().split('T')[0];
+
+        // Auto-generate slug from title
+        titleEl.addEventListener('input', () => {
+            if (!idEl.dataset.manual) {
+                idEl.value = titleEl.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .substring(0, 60);
+            }
+        });
+
+        idEl.addEventListener('input', () => {
+            idEl.dataset.manual = 'true';
+        });
+
+        // Live preview
+        contentEl.addEventListener('input', () => {
+            const allowed = contentEl.value
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/on\w+\s*=/gi, '');
+            previewEl.innerHTML = allowed || '<p style="color: var(--color-text-muted);">Start typing above to see a preview...</p>';
+        });
+
+        // Generate
+        genBtn.addEventListener('click', () => {
+            const title   = titleEl.value.trim();
+            const id      = idEl.value.trim();
+            const tag     = tagEl.value.trim();
+            const date    = dateEl.value;
+            const excerpt = excerptEl.value.trim();
+            const content = contentEl.value.trim();
+
+            if (!title || !id || !tag || !date || !excerpt || !content) {
+                showMsg('Please fill in all fields.', 'error');
+                return;
+            }
+
+            // Generate posts-data.js entry
+            const dataEntry = `    {
+        id: "${escStr(id)}",
+        title: "${escStr(title)}",
+        tag: "${escStr(tag)}",
+        date: "${date}",
+        excerpt: "${escStr(excerpt)}",
+        file: "posts/${escStr(id)}.html"
+    },`;
+
+            document.getElementById('outputDataEntry').value = dataEntry;
+            document.getElementById('outputDataSection').style.display = '';
+
+            // Generate HTML file
+            const html = buildPostHtml(title, tag, date, content);
+            document.getElementById('outputHtml').value = html;
+            document.getElementById('outputFilename').textContent = `posts/${id}.html`;
+            document.getElementById('outputHtmlSection').style.display = '';
+
+            showMsg('Files generated! Scroll down to copy them.', 'success');
+        });
+
+        function buildPostHtml(title, tag, date, bodyContent) {
+            const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escHtml(title)} | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">${escHtml(tag)}</span>
+                <h1>${escHtml(title)}</h1>
+                <p class="blog-post-meta">${formattedDate}</p>
+            </div>
+
+            <div class="blog-post-content">
+${bodyContent}
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"><\/script>
+</body>
+</html>`;
+        }
+
+        function escStr(s) {
+            return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        }
+
+        function escHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function showMsg(text, type) {
+            msgEl.textContent = text;
+            msgEl.className = 'admin-msg ' + type;
+        }
+    })();
+
+    function copyToClipboard(id) {
+        const el = document.getElementById(id);
+        el.select();
+        document.execCommand('copy');
+        const btn = el.parentElement.querySelector('.btn');
+        const origText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = origText; }, 2000);
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsisID: Identity-Preserving Text-to-Video Generation | Hammond Lee</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="../index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html" class="nav-link">Home</a></li>
+                <li><a href="../blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="../projects.html" class="nav-link">Projects</a></li>
+                <li><a href="../contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <a href="../blog.html" class="blog-back-link">&larr; Back to Blog</a>
+    </section>
+
+    <article class="section" style="padding-top: 0;">
+        <div class="blog-post">
+            <div class="blog-post-header">
+                <span class="post-tag" style="display:inline-block; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.75rem; font-weight:600; text-transform:uppercase; background:rgba(125,211,252,0.15); color:var(--color-primary); border:1px solid rgba(125,211,252,0.2); margin-bottom:1rem;">Video Generation</span>
+                <h1>ConsisID: Identity-Preserving Text-to-Video Generation by Frequency Decomposition</h1>
+                <p class="blog-post-meta">February 20, 2026 &middot; Yuan et al. (CVPR 2025)</p>
+            </div>
+
+            <div class="blog-post-content">
+                <h2>Motivation</h2>
+                <p>In previous work, we explored <strong>MimicMotion</strong> (pose-guided video generation) and <strong>ArcFace</strong> (face recognition). MimicMotion uses a reference person image and pose sequence to generate video — the pose controls body movement, but keeping the face consistent across frames remains a challenge.</p>
+
+                <p><strong>Identity-Preserving Text-to-Video (IPT2V)</strong> models aim to solve this: given a single reference photo of a person plus a text prompt, generate a video where the person's face stays consistent with the reference while the video content follows the text description. This is harder than normal text-to-video because the model must simultaneously follow text instructions AND maintain pixel-level facial consistency.</p>
+
+                <h2>The Problem: U-Net vs. DiT</h2>
+                <p>Most existing tuning-free IPT2V methods are built on <strong>U-Net</strong> architectures (e.g., ID-Animator). But the field is moving to <strong>DiT</strong> (Diffusion Transformer), and existing U-Net methods cannot be directly adapted.</p>
+
+                <p>Why does U-Net work well for identity preservation? U-Net has an encoder-decoder structure with skip connections that naturally preserve spatial detail at multiple scales. DiT lacks these built-in multi-scale connections, making identity injection more challenging.</p>
+
+                <h3>Key Findings About Frequency</h3>
+                <ol>
+                    <li><strong>Low-frequency features</strong> (face shape, overall contours, proportions) are essential for pixel-level prediction tasks in diffusion models. They help the model converge faster.</li>
+                    <li><strong>Transformers have limited perception of high-frequency information</strong> (eye texture, lip shape, skin texture, wrinkles) — the intrinsic identity markers that distinguish one person from another.</li>
+                </ol>
+
+                <h2>ConsisID Framework</h2>
+                <p>ConsisID (Consistent Identity) is built on top of <strong>CogVideoX-5B</strong>, a DiT-based text-to-video model. The core idea: decompose facial identity into low-frequency and high-frequency signals, then inject each into the right place in DiT.</p>
+
+                <h3>Global Facial Extractor (Low Frequency)</h3>
+                <p>Goal: provide low-frequency facial information to help DiT converge faster. The approach: <strong>concatenate the reference face image with the noise input</strong> through the VAE encoder. But there's a subtlety — the reference face contains both high-frequency details and low-frequency structure. The VAE naturally acts as a low-pass filter, preserving the large-scale face structure while smoothing out fine details.</p>
+
+                <p>The loss function becomes: L<sub>b</sub> = E[||ε - ε<sub>θ</sub>(x₀, t, τ<sub>θ</sub>(y), ψ<sub>θ</sub>(f))||²], where ψ<sub>θ</sub> is the VAE encoding the reference face. Ablation studies show that when this component is removed, the model fails to converge properly.</p>
+
+                <h3>Local Facial Extractor (High Frequency)</h3>
+                <p>Goal: capture <strong>intrinsic identity features</strong> that the Global Extractor misses — features that stay the same regardless of expression, pose, age, or makeup. Think of the unique shape of your eyes, the specific curve of your nose, the texture pattern of your skin.</p>
+
+                <p>This extractor combines two complementary feature sources:</p>
+                <ul>
+                    <li><strong>ArcFace features:</strong> Identity-discriminative 512-d embeddings trained specifically for face recognition</li>
+                    <li><strong>CLIP features:</strong> Rich semantic visual features with broader understanding</li>
+                </ul>
+
+                <p>These are fused using a <strong>Q-Former</strong> (from BLIP-2) — a module that uses learnable queries to attend to both feature sets, generating identity features enriched with semantic information. The fused features are then injected into the DiT blocks.</p>
+
+                <h2>Related Work Context</h2>
+                <h3>Tuning-Based Methods</h3>
+                <p>Methods like <strong>DreamBooth</strong> fine-tune the entire network for each new person (1+ hour per person). <strong>LoRA</strong> trains only a small subset of parameters but still requires per-person optimization.</p>
+
+                <h3>Tuning-Free Methods</h3>
+                <p>For images: <strong>IP-Adapter</strong> uses CLIP features through cross-attention; <strong>InstantID</strong> replaces CLIP with ArcFace features and adds a pose network. For videos: <strong>ID-Animator</strong> was the only open-source option before ConsisID, but it was limited to U-Net architectures.</p>
+
+                <h2>Conclusion</h2>
+                <p>ConsisID addresses a fundamental gap in the field: how to preserve facial identity in DiT-based video generation models. By decomposing identity into frequency components and using specialized extractors for each, it achieves state-of-the-art identity preservation without per-person fine-tuning. The combination of ArcFace for discriminative identity features and CLIP for semantic features, fused through Q-Former, provides a robust way to inject identity information into the generation process.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="../contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hammond Lee | AI Researcher</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="bg-gradient"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Hammond Lee</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="blog.html" class="nav-link">Blog</a></li>
+                <li><a href="projects.html" class="nav-link">Projects</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content glass-card glass-card-hero">
+            <div class="hero-avatar">
+                <div class="avatar-ring"></div>
+                <div class="avatar-placeholder">HL</div>
+            </div>
+            <h1 class="hero-title">
+                <span class="greeting">Hello, I'm</span>
+                <span class="name">Hammond Lee</span>
+            </h1>
+            <p class="hero-subtitle">AI Researcher &amp; Developer</p>
+            <p class="hero-description">
+                Passionate about computer vision, generative AI, and deep learning.
+                Researching face recognition, video generation, diffusion models, and image inpainting.
+            </p>
+            <div class="hero-buttons">
+                <a href="blog.html" class="btn btn-primary glow-btn">Read My Blog</a>
+                <a href="projects.html" class="btn btn-secondary glow-btn">View Projects</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="section" id="about">
+        <div class="container">
+            <h2 class="section-title">About Me</h2>
+            <div class="about-grid">
+                <div class="glass-card about-card fade-in-up">
+                    <div class="about-icon">🔬</div>
+                    <h3>Research Focus</h3>
+                    <p>My research spans across generative AI, focusing on diffusion models, face recognition, identity-preserving video generation, and image inpainting techniques.</p>
+                </div>
+                <div class="glass-card about-card fade-in-up" style="animation-delay: 0.1s;">
+                    <div class="about-icon">🧠</div>
+                    <h3>Deep Learning</h3>
+                    <p>Experienced with architectures including U-Net, Vision Transformers (ViT), Diffusion Transformers (DiT), and Latent Diffusion Models (LDM).</p>
+                </div>
+                <div class="glass-card about-card fade-in-up" style="animation-delay: 0.2s;">
+                    <div class="about-icon">🎥</div>
+                    <h3>Video Generation</h3>
+                    <p>Working on pose-guided human motion video generation with confidence-aware mechanisms, identity preservation, and temporal consistency.</p>
+                </div>
+                <div class="glass-card about-card fade-in-up" style="animation-delay: 0.3s;">
+                    <div class="about-icon">🖼️</div>
+                    <h3>Computer Vision</h3>
+                    <p>Exploring image inpainting with Fourier convolutions, text-guided image editing via cross-attention control, and face embedding techniques.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Blog Posts -->
+    <section class="section" id="recent-posts">
+        <div class="container">
+            <h2 class="section-title">Recent Posts</h2>
+            <div class="posts-grid" id="recentPosts">
+                <!-- Populated by JS -->
+            </div>
+            <div class="section-cta">
+                <a href="blog.html" class="btn btn-primary glow-btn">View All Posts</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2026 Hammond Lee. Built with liquid glass.</p>
+                <div class="footer-links">
+                    <a href="https://github.com/Hammond65" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
+                    <a href="contact.html" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecentPosts('recentPosts', 3);
+        });
+    </script>
+</body>
+</html>
