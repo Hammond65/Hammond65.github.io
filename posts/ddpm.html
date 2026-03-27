@@ -46,80 +46,74 @@
             </div>
 
             <div class="blog-post-content">
-                <h2>Introduction</h2>
-                <p>Diffusion models belong to a family called <strong>Generative Models</strong>. The shared goal across all generative models is to learn the underlying distribution of real data — such as images — so that we can sample new, realistic data points from that distribution. However, each approach takes a fundamentally different mathematical route.</p>
+                <h2>What Are Diffusion Models?</h2>
+                <p>Diffusion models are a type of model that learns to create new images. The idea is simple: take a clean image, slowly add noise until it becomes pure static, then train a network to undo that noise step by step.</p>
 
-                <p><strong>GANs</strong> (Generative Adversarial Networks) use two competing neural networks. <strong>VAEs</strong> (Variational Autoencoders) encode data into a latent space and decode back. <strong>Flow-based models</strong> use invertible transformations for exact likelihood computation. And <strong>Diffusion Models</strong> — the focus here — take a unique approach: gradually adding noise to data, then learning to reverse that process.</p>
+                <p>Other methods exist too — <strong>GANs</strong> use two networks that compete, <strong>VAEs</strong> compress and rebuild images, and <strong>Flow models</strong> use reversible math. Diffusion models stand out because they are stable to train and produce sharp results.</p>
 
-                <p>Today, diffusion models power some of the most impressive AI applications: image-to-image translation, text-to-image generation (Stable Diffusion, DALL-E), and even image-to-video generation.</p>
+                <p>They power tools like Stable Diffusion and DALL-E for turning text into images, and even for making videos.</p>
 
-                <h2>The Forward Diffusion Process</h2>
-                <p>The forward process starts with a real data sample <strong>x₀</strong> drawn from the true data distribution. We then gradually add small amounts of Gaussian noise over <strong>T timesteps</strong>. At each step t, we define a conditional distribution:</p>
+                <h2>Adding Noise (Forward Process)</h2>
+                <p>Start with a clean image x₀. At each step t, add a small amount of random noise. After enough steps (usually 1000), the image becomes pure noise — you can't tell what it used to be.</p>
 
                 <blockquote>q(xₜ | xₜ₋₁) = N(xₜ; √(1-βₜ) · xₜ₋₁, βₜI)</blockquote>
 
-                <p>The noise level is controlled by a <strong>variance schedule {βₜ ∈ (0,1)}</strong>. As t increases, the original data loses its features — first the fine textures disappear, then the edges, then the shapes — until eventually xₜ becomes indistinguishable from pure Gaussian noise.</p>
+                <p>A schedule {βₜ} controls how much noise is added at each step. Early steps add little noise, later steps add more.</p>
 
-                <h3>The Reparameterization Trick</h3>
-                <p>A critical efficiency insight: we don't need to simulate every step sequentially. Using the reparameterization trick, we can jump directly to any timestep t:</p>
+                <h3>Jumping to Any Step</h3>
+                <p>We don't need to add noise one step at a time. Using a math trick, we can jump straight to any noise level:</p>
                 <blockquote>xₜ = √(ᾱₜ) · x₀ + √(1 - ᾱₜ) · ε</blockquote>
-                <p>where ᾱₜ is the cumulative product of αᵢ = 1 - βᵢ, and ε is standard Gaussian noise. This lets us efficiently create training samples at any noise level.</p>
+                <p>This makes training much faster since we can pick any random step to practice on.</p>
 
-                <h3>Training Objective</h3>
-                <p>The purpose of the forward process is to train a neural network to <strong>predict the noise</strong> inside an image. We take a clean image, add noise to create xₜ, feed it into the network, and the network predicts the noise that was injected. The loss is simply <strong>Mean Squared Error</strong> between predicted and actual noise.</p>
+                <h3>What the Network Learns</h3>
+                <p>The network takes a noisy image and tries to guess what noise was added. The training loss is just the difference (MSE) between the real noise and the predicted noise.</p>
 
-                <h2>The Reverse Diffusion Process</h2>
-                <p>The reverse process is where image generation actually happens. Starting from pure noise, we gradually reconstruct a realistic image. We train a neural network <strong>pθ</strong> to approximate the reverse conditional probabilities:</p>
+                <h2>Removing Noise (Reverse Process)</h2>
+                <p>To create a new image, start from pure noise and remove it step by step. At each step the network predicts the noise, we subtract some of it, and repeat until we get a clean image.</p>
 
                 <blockquote>pθ(xₜ₋₁ | xₜ) = N(xₜ₋₁; μθ(xₜ, t), Σθ(xₜ, t))</blockquote>
 
-                <p>In practice: feed a noisy image xₜ into the pretrained network, get the predicted noise, compute the predicted clean image, add back a controlled amount of noise, and obtain xₜ₋₁. Repeat until we reach x₀.</p>
-
-                <h2>Why Diffusion Models Avoid Blurry Results</h2>
-                <p>This is one of the most important questions. MSE loss typically produces blurry results in autoencoders and super-resolution networks. Yet diffusion models, using the same MSE loss, produce sharp images. Why?</p>
-
-                <h3>Two Key Insights</h3>
+                <h2>Why the Results Are Sharp, Not Blurry</h2>
+                <p>MSE loss usually makes blurry images. But diffusion models avoid this for two reasons:</p>
                 <ol>
-                    <li><strong>Predicting noise forces the model to learn high-frequency details.</strong> Gaussian noise is pure high-frequency content. The model must distinguish between random noise and real texture details like fur, skin pores, or fabric patterns. This prevents the model from ignoring fine details.</li>
-                    <li><strong>Multiple timesteps decompose uncertainty.</strong> At early stages (t ≈ 999), all fine details are destroyed — the model only needs to decide the large-scale structure (where the cat is, what direction it faces). At late stages (t ≈ 1), the structure is already fixed — the model only needs to add fine texture details. Each step has a well-defined, low-ambiguity task.</li>
+                    <li><strong>Predicting noise means learning details.</strong> Noise is all high-frequency content, so the network must learn to tell apart real textures (like fur or skin) from random noise.</li>
+                    <li><strong>Each step handles one level of detail.</strong> Early steps decide the big picture (shape, layout). Late steps add fine details (texture, edges). No single step has too much to figure out.</li>
                 </ol>
 
-                <p>Together, these two components prevent the "one-to-many" averaging problem that causes blurriness in direct prediction architectures.</p>
+                <h2>Noise Schedules and Faster Sampling</h2>
+                <h3>Linear vs. Cosine</h3>
+                <p>The original DDPM used a <strong>linear schedule</strong> that added noise too fast — the last 40% of steps were wasted. A <strong>cosine schedule</strong> spreads the noise more evenly so every step is useful.</p>
 
-                <h2>Noise Schedule &amp; Efficient Sampling</h2>
-                <h3>Linear vs. Cosine Schedule</h3>
-                <p>The original DDPM used a <strong>linear schedule</strong> — increasing β linearly. The flaw: the signal drops to near zero very quickly (around t = 0.4), meaning the last 40% of training steps are wasted on pure noise. The <strong>cosine schedule</strong> (Nichol &amp; Dhariwal) uses a cosine function to smooth the curve, ensuring a more gradual transition and better utilization of all timesteps.</p>
+                <h3>Image Size Matters</h3>
+                <p>The same amount of noise damages a small image (64×64) much more than a large one (1024×1024). So the schedule needs adjusting for different sizes.</p>
 
-                <h3>Resolution Matters</h3>
-                <p>Higher-resolution images have more redundancy. The same noise injection heavily corrupts a 64×64 image but barely affects a 1024×1024 image. This means noise schedules need to be adjusted for different resolutions.</p>
+                <h3>Fewer Steps with DDIM and Euler</h3>
+                <p><strong>DDIM</strong> showed that you can skip most steps and still get good images — 50 steps instead of 1000. <strong>Euler</strong> schedulers are now common and even faster.</p>
 
-                <h3>Faster Sampling: DDIM &amp; Euler</h3>
-                <p><strong>DDIM</strong> (Denoising Diffusion Implicit Models) transforms the stochastic process into a deterministic mapping — the same initial noise always produces the same image. It proved we can generate high-quality images in just 50 steps instead of 1000. <strong>Euler</strong> schedulers have become the default for state-of-the-art models, offering yet more efficient sampling.</p>
-
-                <h2>Architecture Evolution: LDM → DiT</h2>
-                <h3>Latent Diffusion Models (LDM)</h3>
-                <p>Instead of running diffusion on raw pixels, LDM operates in a <strong>compressed latent space</strong> using a VQ-GAN encoder-decoder. This reduces the computational complexity by a factor of ~8, making high-resolution generation feasible on consumer GPUs. The U-Net backbone is augmented with <strong>cross-attention</strong> mechanisms to incorporate text conditioning from CLIP.</p>
+                <h2>From U-Net to Transformers</h2>
+                <h3>Latent Diffusion (LDM)</h3>
+                <p>Instead of working on full-size images, LDM first compresses them into a smaller space using an encoder. Diffusion runs in this smaller space, which is about 8× cheaper. A U-Net does the denoising, and text input from CLIP is mixed in through cross-attention.</p>
 
                 <h3>Diffusion Transformer (DiT)</h3>
-                <p>DiT replaces the U-Net entirely with a standard <strong>Vision Transformer (ViT)</strong>. The motivation: U-Nets are architecturally complex with downsampling, upsampling, skip connections, and convolutional biases. Transformers offer a simpler, more scalable architecture. Key innovations include:</p>
+                <p>DiT replaces the U-Net with a Vision Transformer. Transformers are simpler and scale better. Key ideas:</p>
                 <ul>
-                    <li><strong>Patchify:</strong> Divides the latent input into non-overlapping patches, creating token sequences for the transformer.</li>
-                    <li><strong>AdaLN-Zero:</strong> Uses adaptive Layer Normalization to inject timestep and label conditioning, avoiding the need for separate cross-attention layers.</li>
-                    <li><strong>Zero initialization:</strong> Output MLP weights start at zero, preventing random conditioning signals from disrupting early training.</li>
+                    <li><strong>Patchify:</strong> Cut the image into patches and treat them as tokens.</li>
+                    <li><strong>AdaLN-Zero:</strong> Feed the timestep and label info through layer normalization instead of extra attention layers.</li>
+                    <li><strong>Zero init:</strong> Start output weights at zero so the model trains smoothly from the start.</li>
                 </ul>
 
-                <h3>MultiModal-DiT (MM-DiT)</h3>
-                <p>The architecture behind Stable Diffusion 3.5, MM-DiT processes image and text in separate streams with <strong>Joint Attention</strong> — allowing image tokens and text tokens to attend to each other directly, while maintaining separate processing paths for everything else.</p>
+                <h3>MM-DiT</h3>
+                <p>Used in Stable Diffusion 3.5. It runs image and text in separate paths but lets them look at each other through joint attention.</p>
 
-                <h2>Practical Extensions</h2>
-                <h3>LoRA (Low-Rank Adaptation)</h3>
-                <p>Full fine-tuning of diffusion models is expensive (2-4GB per style). LoRA exploits the insight that weight updates have a <strong>low intrinsic rank</strong> — the necessary changes can be represented by two small matrices. This enables efficient fine-tuning with minimal additional parameters.</p>
+                <h2>Useful Add-ons</h2>
+                <h3>LoRA</h3>
+                <p>Fine-tuning a whole diffusion model is expensive. LoRA adds just two small matrices to each layer, making fine-tuning much cheaper while keeping quality high.</p>
 
                 <h3>ControlNet</h3>
-                <p>A plug-and-play module that adds structural control (edge maps, depth maps, pose skeletons) to text-to-image generation by creating a trainable copy of the encoder with zero convolutions.</p>
+                <p>Lets you control the output using things like edge maps, depth maps, or body poses. It copies part of the model and trains the copy to follow these guides.</p>
 
-                <h2>Conclusion</h2>
-                <p>The evolution of Diffusion Models represents a fundamental shift in generative AI. Unlike GANs, they offer <strong>stable training</strong> with a simple MSE objective. The progression from pixel-space DDPM to latent-space LDM to transformer-based DiT has made high-quality generation increasingly accessible and scalable. Combined with conditioning mechanisms like cross-attention, LoRA for efficient fine-tuning, and ControlNet for spatial control, diffusion models have become the backbone of modern generative AI.</p>
+                <h2>Summary</h2>
+                <p>Diffusion models add noise then learn to remove it. They train stably, produce sharp images, and have grown from simple DDPM to fast transformer-based systems like DiT. With tools like LoRA and ControlNet, they are now easy to fine-tune and control.</p>
             </div>
         </div>
     </article>

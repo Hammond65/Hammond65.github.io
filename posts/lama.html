@@ -46,64 +46,54 @@
             </div>
 
             <div class="blog-post-content">
-                <h2>The Challenge of Large Mask Inpainting</h2>
-                <p>Image inpainting — the task of filling in missing or masked regions of an image — is a fundamental problem in computer vision. While small masks can often be filled using nearby pixel information, <strong>large masks</strong> present a much harder challenge. When most of the image is missing, the model must understand the global structure and semantics of the scene to generate coherent content.</p>
+                <h2>What Is Inpainting?</h2>
+                <p>Inpainting means filling in missing parts of an image. If you erase someone from a photo, the model needs to fill that hole with something that looks natural. Small holes are easy — just look at nearby pixels. But when the hole is large, the model needs to understand the whole scene to fill it in correctly.</p>
 
-                <p>Traditional approaches using standard convolutional neural networks (CNNs) struggle with this. CNNs have a <strong>limited receptive field</strong> — each layer only sees a small local region. Even with many stacked layers, the effective receptive field grows slowly, making it difficult to capture global context needed for large mask completion.</p>
+                <p>Normal convolution layers only look at a small area at a time. Even with many layers stacked together, they struggle to see the big picture. LaMa solves this.</p>
 
-                <h2>Three Key Contributions</h2>
+                <h2>Three Main Ideas</h2>
 
                 <h3>1. Fast Fourier Convolutions (FFC)</h3>
-                <p>The most important contribution is replacing standard convolutions in the bottleneck layers with <strong>FFC blocks</strong>. Originally proposed by Chi et al. (NeurIPS 2020) for image classification, FFCs are designed to capture both local and global features simultaneously.</p>
-
-                <p>Each FFC block has two parallel processing paths:</p>
+                <p>LaMa replaces normal convolutions with <strong>FFC blocks</strong>. Each FFC block has two paths:</p>
                 <ul>
-                    <li><strong>Local Path:</strong> Acts like an ordinary 3×3 convolution. Takes information from both local and global paths, sums them, then applies normalization and activation.</li>
-                    <li><strong>Global Path:</strong> Takes information from the local path through a convolution. For global features, applies a <strong>Spectral Transform</strong> (FFT-based). The Spectral Transform converts the image from the spatial domain (pixels) to the frequency domain (patterns/waves) using 2D Fast Fourier Transform, applies convolution in frequency space, then converts back with inverse FFT.</li>
+                    <li><strong>Local path:</strong> Works like a normal convolution — looks at a small area around each pixel.</li>
+                    <li><strong>Global path:</strong> Uses the Fourier Transform to look at the <strong>entire image at once</strong>. It converts the image into frequency patterns, processes them, then converts back.</li>
                 </ul>
 
-                <h3>Why Frequency Domain Captures Global Features</h3>
-                <p>In the spatial domain, each pixel value is local (represents one location). In the frequency domain, each frequency component is <strong>global</strong> — it represents information from every position in the spatial domain. This bidirectional relationship is key.</p>
+                <h3>Why Does the Frequency Trick Work?</h3>
+                <p>In pixel space, each value only describes one spot. In frequency space, each value carries information from <strong>the whole image</strong>. So even one operation in frequency space already "sees" everything.</p>
 
-                <h3>FFC vs. Standard Convolution at Higher Resolutions</h3>
-                <p>Consider a U-Net trained on 12×12 face images. At the bottleneck, features are 3×3, and a 3×3 convolution covers 100% of the feature map. Now increase the resolution to 28×28 — at the bottleneck, features become 7×7, and the same 3×3 convolution now covers only ~18.4%. The model can no longer see the global context.</p>
+                <h3>Why It Scales to Any Size</h3>
+                <p>A normal 3×3 convolution covers less and less of the image as the image gets bigger. An FFC block always sees the full image, no matter the size. Tests show LaMa with FFC works well from 256×256 up to 2048×2048, while normal convolution gets worse at higher sizes.</p>
 
-                <p><strong>FFC blocks don't have this problem.</strong> Each block maintains a complete view of the entire input at any resolution. Whether the image is 256×256 or 2048×2048, the frequency domain representation captures the entire image. The 1×1 convolution in frequency space still operates on similar frequency patterns, and FFT scales with image dimensions.</p>
+                <p>Even better: LaMa with FFC uses <strong>27M parameters</strong> and beats normal LaMa versions with 45M and 74M parameters.</p>
 
-                <h3>Ablation Results</h3>
-                <p>Models trained on 256×256 and tested up to 2048×2048 showed that standard LaMa (regular convolution) performance degrades rapidly at higher resolutions, while <strong>LaMa with FFC maintains performance across all resolutions</strong>. Furthermore, LaMa-Fourier with <strong>27M parameters</strong> outperforms standard LaMa with 45M and 74M parameters — achieving better quality with 40-60% fewer parameters.</p>
+                <h3>2. Better Loss Function</h3>
+                <p>For large holes, many different fills could look correct. If you use a simple pixel loss (like L1), the model averages all possible answers and gives you a <strong>blurry result</strong>.</p>
 
-                <h3>2. High Receptive Field Perceptual Loss (ResPL)</h3>
-                <p>Traditional pixel-wise losses like L1/L2 require exact reconstruction. For large masks, the visible context is insufficient — multiple valid outputs exist. The model averages them, producing <strong>blurry results</strong>.</p>
+                <p>LaMa uses features from a segmentation network that understands scenes. This loss looks at the overall structure of the image, not just individual pixels, so the output is sharper and more natural.</p>
 
-                <p>Why not LPIPS? LPIPS was trained on classification tasks with 64×64 patches. It focuses on textures, not global structure. For higher resolution inputs, its global capturing ability diminishes.</p>
+                <h3>3. Training with Large Masks</h3>
+                <p>Most models train with small holes, so they learn to just copy nearby pixels. LaMa trains with <strong>large masks on purpose</strong>. When most of the image is missing, the model can't cheat — it has to actually understand the scene to fill it in.</p>
 
-                <p>LaMa's solution: use features from a <strong>ResNet50-dilated segmentation network</strong> trained on ADE20K (diverse scenes with semantic understanding). Dilated convolutions provide a large receptive field, capturing global semantic structure rather than just local textures. The ablation study confirms HRFPL improves both FID and LPIPS metrics over standard LPIPS loss.</p>
-
-                <h3>3. Large Training Masks</h3>
-                <p>The third contribution is an <strong>aggressive large mask training strategy</strong>. By training with larger, more challenging masks, the model can't rely on copying nearby pixels — there are none. This forces the network to understand and generate content based on global scene understanding, aligning with the FFC architecture's strength.</p>
-
-                <h2>Architecture Details</h2>
+                <h2>How It's Built</h2>
                 <ul>
-                    <li><strong>Input:</strong> Masked image (RGB) + binary mask → 4 channels</li>
-                    <li><strong>Initial Conv:</strong> 7×7 with 3-pixel padding</li>
-                    <li><strong>Encoder:</strong> 3 downsampling blocks (8× total downsampling)</li>
-                    <li><strong>Bottleneck:</strong> 6-18 FFC ResNet blocks with global + local branches</li>
-                    <li><strong>Decoder:</strong> 3 upsampling blocks (mirror encoder)</li>
-                    <li><strong>Training:</strong> Adam optimizer, 1M iterations, batch size 30, trained on Places and CelebA-HQ</li>
-                    <li><strong>Loss:</strong> L<sub>final</sub> = κL<sub>adv</sub> + αL<sub>HRFPL</sub> + βL<sub>DiscPL</sub> + γR₁</li>
+                    <li><strong>Input:</strong> Image with holes + a mask showing where the holes are</li>
+                    <li><strong>Encoder:</strong> 3 blocks that shrink the image</li>
+                    <li><strong>Middle:</strong> 6-18 FFC blocks (the core that does the work)</li>
+                    <li><strong>Decoder:</strong> 3 blocks that bring it back to full size</li>
+                    <li><strong>Trained on:</strong> Places dataset and CelebA-HQ faces</li>
                 </ul>
 
-                <h2>Practical Results</h2>
-                <p>LaMa excels at <strong>repetitive structures</strong> (fences, patterns) for small-to-medium masks, reconstructing them nearly perfectly. For text on clothing with proper segmentation masks, results are also strong. However, challenges remain:</p>
+                <h2>What Works and What Doesn't</h2>
+                <p>LaMa is great at filling in <strong>repeated patterns</strong> like fences, tiles, or textures. It also handles removing text from clothing well. But it can struggle when:</p>
                 <ul>
-                    <li>Large masks with complex structures show some distortion</li>
-                    <li>Masks covering multiple objects without complete segmentation produce inconsistent results</li>
-                    <li>Proper segmentation masking is critical — the model requires clear, complete object boundaries</li>
+                    <li>The hole covers a complex area with many different objects</li>
+                    <li>The mask doesn't clearly cover the whole object you want to remove</li>
                 </ul>
 
-                <h2>Conclusion</h2>
-                <p>LaMa demonstrates that Fast Fourier Convolutions can fundamentally change how inpainting networks process information. By capturing both local and global features simultaneously, achieving resolution robustness, and using 40-60% fewer parameters, FFC-based inpainting represents a significant advance. Combined with the high receptive field perceptual loss and aggressive masking strategy, LaMa sets a strong foundation for practical image restoration applications.</p>
+                <h2>Summary</h2>
+                <p>LaMa uses Fourier transforms to give the network a global view of the image, trains with large masks to force real understanding, and uses a smarter loss function to avoid blurry results. It works at any resolution and uses fewer parameters than older methods.</p>
             </div>
         </div>
     </article>

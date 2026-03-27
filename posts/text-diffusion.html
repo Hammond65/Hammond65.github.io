@@ -46,81 +46,62 @@
             </div>
 
             <div class="blog-post-content">
-                <h2>Motivation</h2>
-                <p>In previous discussions, we covered how diffusion models denoise step by step — taking a noisy image xₜ and timestep t, predicting noise εθ. We briefly mentioned <strong>cross-attention</strong> as the "bridge" for text conditioning. This post goes full depth into how and why text can guide image generation, covering <strong>CLIP</strong>, <strong>cross-attention mechanics</strong>, <strong>DAAM visualization</strong>, and <strong>Prompt-to-Prompt editing</strong>.</p>
+                <h2>How Does Text Control Image Generation?</h2>
+                <p>Diffusion models remove noise step by step to create images. But how does the model know what to draw? This post explains how text guides the process — from turning words into numbers, to how each pixel decides which words matter to it.</p>
 
-                <h2>CLIP: Turning Words into Useful Numbers</h2>
-                <h3>The Problem Before CLIP</h3>
-                <p>Neural networks only understand numbers, not words. We need to convert "A cute cat on grass" into a matrix of numbers that carry <strong>visual meaning</strong>. Simple approaches like one-hot encoding fail: the distance between "cat" and "dog" is the same as between "cat" and "airplane" — the model can't learn that semantically similar concepts should be close together.</p>
+                <h2>CLIP: Turning Words into Numbers</h2>
+                <h3>The Problem</h3>
+                <p>Networks only understand numbers. We need to turn "A cute cat on grass" into numbers that carry <strong>visual meaning</strong>. Simple numbering (cat=1, dog=2) doesn't work because it makes "cat" and "dog" just as different as "cat" and "airplane."</p>
 
                 <h3>How CLIP Works</h3>
-                <p><strong>CLIP</strong> (Contrastive Language-Image Pre-training) was trained by OpenAI on 400 million image-text pairs. It has two encoders trained together:</p>
+                <p><strong>CLIP</strong> was trained on 400 million image-text pairs. It has two parts:</p>
                 <ul>
-                    <li><strong>Image Encoder (ViT):</strong> image → vector</li>
-                    <li><strong>Text Encoder (Transformer):</strong> sentence → vector</li>
+                    <li><strong>Image encoder:</strong> turns an image into a vector of numbers</li>
+                    <li><strong>Text encoder:</strong> turns a sentence into a vector of numbers</li>
                 </ul>
+                <p>During training, matching image-text pairs are pushed close together, and non-matching pairs are pushed apart. After training, similar concepts end up near each other in this number space.</p>
 
-                <p>Training uses <strong>contrastive learning</strong>: take a batch of 32,768 image-text pairs, maximize similarity for matching pairs while minimizing it for non-matching ones. CLIP uses <strong>cosine similarity</strong> (measuring angle between vectors) rather than Euclidean distance, scaled by a learnable temperature parameter.</p>
+                <h3>What Do We Get?</h3>
+                <p>For diffusion models, we only use the text encoder. It takes a sentence, breaks it into up to 77 words, and turns each into a 768-number vector. The words interact with each other through the network, so "cute" learns it describes "cat" and not "grass." The output is a 77×768 table of numbers.</p>
 
-                <h3>The CLIP Text Encoder Output</h3>
-                <p>In diffusion models, we only use the Text Encoder (the Image Encoder is discarded). The process: tokenize the prompt into 77 tokens → embed each token as a 768-d vector → pass through 12 Transformer layers where tokens interact through self-attention. "Cute" learns it describes "cat," not "grass." The result is a 77×768 matrix where each token carries context-aware semantic meaning.</p>
+                <h2>Cross-Attention: How Pixels Read Text</h2>
+                <p>Cross-attention lets each pixel ask: "Which words are important to me?"</p>
 
-                <p><strong>Freezing CLIP is smart</strong> — it was already trained on 400M pairs and understands visual concepts. Training from scratch would require much more data and time, and poor early representations could hurt diffusion model training.</p>
-
-                <h2>Cross-Attention: The Full Depth</h2>
-                <p>Cross-attention is the mechanism by which each pixel "asks" the text tokens: "Which words are relevant to me?"</p>
-
-                <h3>Step 1: Creating Q, K, V</h3>
-                <ul>
-                    <li><strong>Query (Q):</strong> From image features — each pixel creates a "question vector" encoding what information it needs</li>
-                    <li><strong>Key (K):</strong> From text features — each word creates an "identity tag"</li>
-                    <li><strong>Value (V):</strong> From text features — each word creates a "content package" with the actual information to transfer</li>
-                </ul>
-
-                <h3>Step 2: Computing Similarity</h3>
-                <p>S = Q · K<sup>T</sup>, producing a matrix of shape H×W×77. Each entry S[i,j] is the dot product between pixel i's query and word j's key. High value means they're relevant to each other.</p>
-
-                <h3>Step 3: SoftMax Normalization</h3>
-                <p>A = softmax(QK<sup>T</sup>/√d). Dividing by √d prevents extremely large values that cause vanishing gradients. SoftMax converts raw scores into probability weights that sum to 1 for each pixel.</p>
-
-                <h3>Step 4: Collecting Information</h3>
-                <p>Output = A · V. For a center pixel in a "cute cat on grass" image:</p>
-                <blockquote>Output<sub>center</sub> = 0.01·V<sub>"A"</sub> + 0.04·V<sub>"cute"</sub> + 0.82·V<sub>"cat"</sub> + 0.02·V<sub>"on"</sub> + 0.11·V<sub>"grass"</sub></blockquote>
-                <p>The center pixel now carries 82% "cat" information. The correct mapping is learned purely from the denoising loss — no explicit labels needed.</p>
-
-                <h3>Multi-Head Attention</h3>
-                <p>One attention head learns one type of relationship. But text-to-image has many: object identity ("cat" maps to cat pixels), color ("red" maps to red regions), spatial relations ("on" connects objects). <strong>8 parallel attention heads</strong> each specialize in different relationship types.</p>
-
-                <h2>DAAM: Opening the Black Box</h2>
-                <p><strong>DAAM</strong> (Diffusion Attentive Attribution Maps) aggregates ~2,400 attention maps (from multiple layers, timesteps, and heads) into one clean heatmap per word.</p>
-
-                <p>The process: (1) Extract attention maps at every timestep and cross-attention layer, (2) Upscale all maps to the same resolution, (3) Average across all timesteps, layers, and heads, (4) Normalize to [0,1].</p>
-
-                <p>Key findings from DAAM:</p>
-                <ul>
-                    <li>Heatmaps correctly show spatial attribution (e.g., "dog" lights up over the dog region, "book" over the book)</li>
-                    <li>Adjectives bind to their nouns ("fluffy" overlaps with "cat")</li>
-                    <li>Verbs activate interaction regions ("reading" lights up between dog and book)</li>
-                    <li>Early timesteps have coarse attention (global structure), late timesteps have sharp attention (fine details)</li>
-                </ul>
-
-                <h2>Prompt-to-Prompt: Text-Only Image Editing</h2>
-                <p>The core problem: even a small modification of the text prompt leads to a <strong>completely different image</strong>. Prompt-to-Prompt solves this by manipulating cross-attention maps during generation.</p>
-
-                <h3>The Algorithm</h3>
+                <h3>The Steps</h3>
                 <ol>
-                    <li>Run denoising for both source and target prompts simultaneously (same initial noise)</li>
-                    <li>At each timestep: extract attention maps from both, compute an edited map, and override the target's attention</li>
+                    <li><strong>Query (Q):</strong> Each pixel creates a question — "What do I need?"</li>
+                    <li><strong>Key (K):</strong> Each word creates a label — "This is what I am"</li>
+                    <li><strong>Value (V):</strong> Each word creates content — "This is the information I carry"</li>
                 </ol>
 
+                <p>The pixel's query is compared with every word's key to find which words matter most. Then the pixel collects information from those words.</p>
+
+                <p>For example, a pixel in the center of a cat image might get: 82% of "cat" information, 11% of "grass," 4% of "cute," and barely anything from "A" or "on."</p>
+
+                <h3>Multiple Attention Heads</h3>
+                <p>One attention head learns one kind of link between text and image. But there are many kinds — which object goes where, what color things are, how objects relate to each other. So the model uses <strong>8 heads in parallel</strong>, each learning a different type of connection.</p>
+
+                <h2>DAAM: Seeing What the Model Sees</h2>
+                <p><strong>DAAM</strong> collects all the attention maps from every step and layer, then combines them into one heatmap per word. This shows which parts of the image each word influenced.</p>
+                <p>Key findings:</p>
+                <ul>
+                    <li>"Dog" lights up over the dog area; "book" lights up over the book</li>
+                    <li>Describing words like "fluffy" overlap with the thing they describe</li>
+                    <li>Action words like "reading" light up between the objects involved</li>
+                    <li>Early steps show rough layout; later steps show fine details</li>
+                </ul>
+
+                <h2>Prompt-to-Prompt: Editing with Just Words</h2>
+                <p>Normally, changing even one word in your prompt gives you a <strong>completely different image</strong>. Prompt-to-Prompt fixes this by reusing the attention maps from the original image.</p>
+
                 <h3>Word Swap</h3>
-                <p>Generate "a cat sitting on a bench" → save all attention maps. Change to "a dog sitting on a bench" → force the model to reuse the saved spatial layout maps. Result: a dog appears in the exact same pose and position as the cat. <strong>Proof: the attention map determines spatial layout.</strong></p>
+                <p>Generate "a cat on a bench" and save the attention maps. Then change to "a dog on a bench" but force the model to keep the same layout. Result: a dog appears in the exact same pose and position as the cat.</p>
 
-                <h3>Attention Re-weighting</h3>
-                <p>Multiply the attention column for a specific word by a scalar. For "a fluffy cat" — increasing the weight of "fluffy" makes the cat increasingly fluffy. The token position is deterministic (always at the same index), so we can precisely target individual words.</p>
+                <h3>Changing Strength</h3>
+                <p>You can also make a word stronger or weaker. For "a fluffy cat," turning up the weight of "fluffy" makes the cat fluffier. This works because each word always sits at the same position in the attention map.</p>
 
-                <h2>Conclusion</h2>
-                <p>This chain of technologies — CLIP for encoding text into visually meaningful representations, cross-attention for fusing text with image features, DAAM for visualization and validation, and Prompt-to-Prompt for practical editing — demonstrates that <strong>text genuinely controls pixel generation</strong> through attention mechanisms. P2P shows that by injecting or manipulating attention maps, we can achieve intuitive, text-only image editing without masks, fine-tuning, or optimization.</p>
+                <h2>Summary</h2>
+                <p>CLIP turns words into meaningful numbers. Cross-attention lets each pixel pick the words that matter to it. DAAM lets us see this happening. And Prompt-to-Prompt shows we can edit images just by changing words, because attention maps control where things appear.</p>
             </div>
         </div>
     </article>
