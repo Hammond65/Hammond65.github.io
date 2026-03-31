@@ -938,6 +938,13 @@ body {
     margin-bottom: 1rem;
 }
 
+.member-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .member-card h3 {
     font-size: 1.3rem;
     font-weight: 600;

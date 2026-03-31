@@ -28,7 +28,7 @@
         .game-pick .desc{font-size:.75rem;color:#64748b;margin-top:.3rem}
         /* ---- game area ---- */
         #gameArea{display:none;width:100%;max-width:820px;padding:0 1rem 1rem;flex:1;flex-direction:column;align-items:center;justify-content:center}
-        canvas{display:block;width:100%;height:auto;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02)}
+        canvas{display:block;width:100%;height:auto;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);transition:max-width .2s}
         .hint{color:#475569;font-size:.78rem;margin-top:.7rem;text-align:center}
     </style>
 </head>
@@ -110,10 +110,11 @@ window.launch = function(name){
     menuBtn.style.display="";
     if(loopId){cancelAnimationFrame(loopId);loopId=null;}
     currentGame=name;
+    cv.style.maxWidth="";
     if(name==="dino")  initDino();
     if(name==="snake") initSnake();
     if(name==="pong")  initPong();
-    if(name==="tetris")initTetris();
+    if(name==="tetris"){cv.style.maxWidth="320px";initTetris();}
 };
 
 window.showMenu = function(){
@@ -172,8 +173,9 @@ function updDino(){
     if(!dStarted||dOver)return;
     var G=cv.height-40;
     dFrame++;dScore=Math.floor(dFrame/6);dSpeed=6+dScore/80;
-    dino.ducking=dDuck&&dino.y>=G-(dDuck?dino.dh:dino.h)-1;
+    dino.ducking=dDuck&&dino.vy===0;
     var ch=dino.ducking?dino.dh:dino.h;
+    if(dino.ducking&&dino.y<G-ch)dino.y=G-ch;
     dino.vy+=dino.grav;dino.y+=dino.vy;
     if(dino.y>=G-ch){dino.y=G-ch;dino.vy=0;}
     dOT++;
@@ -246,7 +248,7 @@ document.addEventListener("keydown",function(e){
     if((e.code==="ArrowUp"||e.code==="KeyW")&&d.y!==1){snNextDir={x:0,y:-1};}
     if((e.code==="ArrowDown"||e.code==="KeyS")&&d.y!==-1){snNextDir={x:0,y:1};}
     if((e.code==="ArrowLeft"||e.code==="KeyA")&&d.x!==1){snNextDir={x:-1,y:0};}
-    if((e.code==="ArrowRight"||e.code==="KeyD")&&d.x!==0){snNextDir={x:1,y:0};}
+    if((e.code==="ArrowRight"||e.code==="KeyD")&&d.x!==-1){snNextDir={x:1,y:0};}
     if(!snStarted)snStarted=true;
     e.preventDefault();
 });
@@ -296,14 +298,14 @@ function drwSnake(){
 /* ============================================================
    3. PONG vs AI
    ============================================================ */
-var PW,PH,PADDLE_H=70,PADDLE_W=10,BALL_R=7,pPlayer,pAI,pBall,pScoreP,pScoreA,pStarted,pOver;
+var PW,PH,PADDLE_H=70,PADDLE_W=10,BALL_R=7,pPlayer,pAI,pBall,pScoreP,pScoreA,pStarted,pOver,pFrame;
 
 function initPong(){
     cv.width=700;cv.height=400;PW=700;PH=400;
     hintEl.textContent="\u2191 / \u2193 or Mouse to move paddle \u00b7 Click to start";
     pPlayer={y:PH/2-PADDLE_H/2};pAI={y:PH/2-PADDLE_H/2};
     pBall={x:PW/2,y:PH/2,vx:4,vy:2*(Math.random()>.5?1:-1)};
-    pScoreP=0;pScoreA=0;pStarted=false;pOver=false;
+    pScoreP=0;pScoreA=0;pStarted=false;pOver=false;pFrame=0;
     cv.addEventListener("click",pongTap);
     cv.addEventListener("touchstart",pongTap,{passive:false});
     cv.addEventListener("mousemove",pongMouse);
@@ -315,9 +317,12 @@ function pongTap(e){if(e.type==="touchstart")e.preventDefault();if(pOver){pScore
 function pongMouse(e){if(currentGame!=="pong")return;var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
 function pongTouch(e){if(currentGame!=="pong")return;e.preventDefault();var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.touches[0].clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
 function clampPaddle(p){if(p.y<0)p.y=0;if(p.y>PH-PADDLE_H)p.y=PH-PADDLE_H;}
-function resetBall(){pBall.x=PW/2;pBall.y=PH/2;pBall.vx=4*(Math.random()>.5?1:-1);pBall.vy=2*(Math.random()>.5?1:-1);}
+function resetBall(){var sp=4+pFrame*0.0008;pBall.x=PW/2;pBall.y=PH/2;pBall.vx=sp*(Math.random()>.5?1:-1);pBall.vy=2*(Math.random()>.5?1:-1);}
 function updPong(){
     if(!pStarted||pOver)return;
+    pFrame++;
+    /* gradual speed increase over time */
+    var sf=1+pFrame*0.00012;
     /* keyboard paddle */
     if(keys["ArrowUp"]||keys["KeyW"])pPlayer.y-=6;
     if(keys["ArrowDown"]||keys["KeyS"])pPlayer.y+=6;
@@ -329,7 +334,7 @@ function updPong(){
     else if(pAI.y>aiTarget+4)pAI.y-=aiSpeed;
     clampPaddle(pAI);
     /* ball */
-    pBall.x+=pBall.vx;pBall.y+=pBall.vy;
+    pBall.x+=pBall.vx*sf;pBall.y+=pBall.vy*sf;
     if(pBall.y-BALL_R<0){pBall.y=BALL_R;pBall.vy*=-1;}
     if(pBall.y+BALL_R>PH){pBall.y=PH-BALL_R;pBall.vy*=-1;}
     /* player paddle collision */
