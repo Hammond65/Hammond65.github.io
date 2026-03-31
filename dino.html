@@ -119,6 +119,7 @@ var hintEl = document.getElementById("hint");
 var menuBtn = document.getElementById("toMenuBtn");
 var currentGame = null;
 var loopId = null;
+var paused=false;
 
 /* ---- palette ---- */
 var BG="#0f172a",C1="#7dd3fc",C2="#c4b5fd",C3="#f0abfc",
@@ -129,6 +130,8 @@ var BG="#0f172a",C1="#7dd3fc",C2="#c4b5fd",C3="#f0abfc",
 var keys={};
 document.addEventListener("keydown",function(e){keys[e.code]=true;});
 document.addEventListener("keyup",function(e){keys[e.code]=false;});
+document.addEventListener("keydown",function(e){if(e.code==="Escape"&&currentGame){paused=!paused;e.preventDefault();}});
+function drwPause(){ctx.fillStyle="rgba(15,23,42,.75)";ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle=TH;ctx.font="600 28px Inter,sans-serif";ctx.textAlign="center";ctx.fillText("PAUSED",cv.width/2,cv.height/2-10);ctx.fillStyle=TXT;ctx.font="400 14px Inter,sans-serif";ctx.fillText("Press ESC to resume",cv.width/2,cv.height/2+20);}
 function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill();}
 
 /* ============================================================
@@ -140,6 +143,7 @@ window.launch = function(name){
     menuBtn.style.display="";
     if(loopId){cancelAnimationFrame(loopId);loopId=null;}
     currentGame=name;
+    paused=false;
     cv.style.maxWidth="";
     if(name==="dino")  initDino();
     if(name==="snake") initSnake();
@@ -156,6 +160,7 @@ window.launch = function(name){
 window.showMenu = function(){
     if(loopId){cancelAnimationFrame(loopId);loopId=null;}
     currentGame=null;
+    paused=false;
     areaEl.style.display="none";
     menuEl.style.display="flex";
     menuBtn.style.display="none";
@@ -200,14 +205,15 @@ function initDino(){
     document.addEventListener("keydown",dinoJump);
     cv.addEventListener("click",dinoTap);
     cv.addEventListener("touchstart",dinoTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updDino();drwDino();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updDino();drwDino();if(paused)drwPause();}
     run();
 }
 function dinoJump(e){
+    if(paused)return;
     if(e.code==="Space"||e.code==="ArrowUp"){e.preventDefault();dinoGo();}
     if(e.code==="ArrowDown"){e.preventDefault();dDuck=true;}
 }
-function dinoTap(e){if(e.type==="touchstart")e.preventDefault();dinoGo();}
+function dinoTap(e){if(e.type==="touchstart")e.preventDefault();if(paused)return;dinoGo();}
 function dinoGo(){
     if(!dino) return;
     var G=cv.height-40;
@@ -270,10 +276,10 @@ function initSnake(){
     snakeReset();
     cv.addEventListener("click",snakeTap);
     cv.addEventListener("touchstart",snakeTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updSnake();drwSnake();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updSnake();drwSnake();if(paused)drwPause();}
     run();
 }
-function snakeTap(e){if(e.type==="touchstart")e.preventDefault();if(snOver)snakeReset();if(!snStarted)snStarted=true;}
+function snakeTap(e){if(e.type==="touchstart")e.preventDefault();if(paused)return;if(snOver)snakeReset();if(!snStarted)snStarted=true;}
 function snakeReset(){
     var mx=Math.floor(SN_COLS/2),my=Math.floor(SN_ROWS/2);
     snake=[{x:mx,y:my},{x:mx-1,y:my},{x:mx-2,y:my}];
@@ -292,6 +298,7 @@ function placeFood(){
 /* direction from keys */
 document.addEventListener("keydown",function(e){
     if(currentGame!=="snake")return;
+    if(paused)return;
     var d=snDir;
     if((e.code==="ArrowUp"||e.code==="KeyW")&&d.y!==1){snNextDir={x:0,y:-1};}
     if((e.code==="ArrowDown"||e.code==="KeyS")&&d.y!==-1){snNextDir={x:0,y:1};}
@@ -358,12 +365,12 @@ function initPong(){
     cv.addEventListener("touchstart",pongTap,{passive:false});
     cv.addEventListener("mousemove",pongMouse);
     cv.addEventListener("touchmove",pongTouch,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updPong();drwPong();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updPong();drwPong();if(paused)drwPause();}
     run();
 }
-function pongTap(e){if(e.type==="touchstart")e.preventDefault();if(pOver){pScoreP=0;pScoreA=0;pOver=false;pStarted=true;resetBall();return;}if(!pStarted)pStarted=true;}
-function pongMouse(e){if(currentGame!=="pong")return;var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
-function pongTouch(e){if(currentGame!=="pong")return;e.preventDefault();var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.touches[0].clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
+function pongTap(e){if(e.type==="touchstart")e.preventDefault();if(paused)return;if(pOver){pScoreP=0;pScoreA=0;pOver=false;pStarted=true;resetBall();return;}if(!pStarted)pStarted=true;}
+function pongMouse(e){if(currentGame!=="pong"||paused)return;var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
+function pongTouch(e){if(currentGame!=="pong"||paused)return;e.preventDefault();var rect=cv.getBoundingClientRect();var sy=rect.height/PH;pPlayer.y=(e.touches[0].clientY-rect.top)/sy-PADDLE_H/2;clampPaddle(pPlayer);}
 function clampPaddle(p){if(p.y<0)p.y=0;if(p.y>PH-PADDLE_H)p.y=PH-PADDLE_H;}
 function resetBall(){var sp=4+pFrame*0.0008;pBall.x=PW/2;pBall.y=PH/2;pBall.vx=sp*(Math.random()>.5?1:-1);pBall.vy=2*(Math.random()>.5?1:-1);}
 function updPong(){
@@ -450,10 +457,10 @@ function initTetris(){
     tNext=rndPiece();spawnPiece();
     cv.addEventListener("click",tetrisTap);
     cv.addEventListener("touchstart",tetrisTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updTetris();drwTetris();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updTetris();drwTetris();if(paused)drwPause();}
     run();
 }
-function tetrisTap(e){if(e.type==="touchstart")e.preventDefault();if(tOver){tRestart();return;}if(!tStarted)tStarted=true;}
+function tetrisTap(e){if(e.type==="touchstart")e.preventDefault();if(paused)return;if(tOver){tRestart();return;}if(!tStarted)tStarted=true;}
 function tRestart(){
     tBoard=[];for(var r=0;r<T_ROWS;r++){tBoard[r]=[];for(var c=0;c<T_COLS;c++)tBoard[r][c]=0;}
     tScore=0;tLines=0;tLevel=1;tOver=false;tStarted=true;tTick=0;tSpeed=30;
@@ -467,7 +474,7 @@ function clearLines(){var cleared=0;for(var r=T_ROWS-1;r>=0;r--){var full=true;f
 function rotateCW(shape){var rows=shape.length,cols=shape[0].length;var n=[];for(var c=0;c<cols;c++){n[c]=[];for(var r=rows-1;r>=0;r--)n[c].push(shape[r][c]);}return n;}
 /* tetris keys */
 document.addEventListener("keydown",function(e){
-    if(currentGame!=="tetris"||!tStarted||tOver)return;
+    if(currentGame!=="tetris"||!tStarted||tOver||paused)return;
     if(e.code==="ArrowLeft"){if(!collides(tCur.shape,tX-1,tY))tX--;e.preventDefault();}
     if(e.code==="ArrowRight"){if(!collides(tCur.shape,tX+1,tY))tX++;e.preventDefault();}
     if(e.code==="ArrowDown"){if(!collides(tCur.shape,tX,tY+1)){tY++;tScore++;}e.preventDefault();}
@@ -534,13 +541,14 @@ function initClicker(){
     function run(){
         loopId=requestAnimationFrame(run);
         var now=performance.now(),dt=(now-lastT)/1000;lastT=now;
-        ck.coins+=ck.cps*dt;
-        drwClicker();
+        if(!paused)ck.coins+=ck.cps*dt;
+        drwClicker();if(paused)drwPause();
     }
     run();
 }
 function clickerTap(e){
     if(e.type==="touchstart")e.preventDefault();
+    if(paused)return;
     var rect=cv.getBoundingClientRect();
     var sx=rect.width/cv.width,sy=rect.height/cv.height;
     var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
@@ -621,12 +629,13 @@ function initTower(){
     tdSpawnT=0;tdSpawnI=40;tdEPerWave=5;tdSpawned=0;
     cv.addEventListener("click",towerTap);
     cv.addEventListener("touchstart",towerTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updTower();drwTower();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updTower();drwTower();if(paused)drwPause();}
     run();
 }
 function hasPathPt(x,y){for(var i=0;i<tdPath.length;i++)if(tdPath[i].x===x&&tdPath[i].y===y)return true;return false;}
 function towerTap(e){
     if(e.type==="touchstart")e.preventDefault();
+    if(paused)return;
     if(tdOver){initTower();return;}
     if(!tdStarted){tdStarted=true;return;}
     var rect=cv.getBoundingClientRect();
@@ -739,11 +748,12 @@ function initTTT(){
     ttBoard=[0,0,0,0,0,0,0,0,0];ttTurn=1;ttWinner=0;ttWinLine=null;
     cv.addEventListener("click",tttTap);
     cv.addEventListener("touchstart",tttTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);drwTTT();}
+    function run(){loopId=requestAnimationFrame(run);drwTTT();if(paused)drwPause();}
     run();
 }
 function tttTap(e){
     if(e.type==="touchstart")e.preventDefault();
+    if(paused)return;
     if(ttWinner!==0){ttBoard=[0,0,0,0,0,0,0,0,0];ttTurn=1;ttWinner=0;ttWinLine=null;return;}
     if(ttTurn!==1)return;
     var rect=cv.getBoundingClientRect();
@@ -760,6 +770,7 @@ function tttTap(e){
     if(ttWinner===0&&ttBoard.indexOf(0)!==-1){ttTurn=2;setTimeout(tttAI,200);}
 }
 function tttAI(){
+    if(paused){setTimeout(tttAI,200);return;}
     if(ttWinner!==0||currentGame!=="ttt")return;
     /* try to win */
     var mv=tttFindMove(2);
@@ -883,13 +894,14 @@ function initPacman(){
     ];
     cv.addEventListener("click",pacmanTap);
     cv.addEventListener("touchstart",pacmanTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);updPacman();drwPacman();}
+    function run(){loopId=requestAnimationFrame(run);if(!paused)updPacman();drwPacman();if(paused)drwPause();}
     run();
 }
-function pacmanTap(e){if(e.type==="touchstart")e.preventDefault();if(pmOver){initPacman();return;}if(!pmStarted)pmStarted=true;}
+function pacmanTap(e){if(e.type==="touchstart")e.preventDefault();if(paused)return;if(pmOver){initPacman();return;}if(!pmStarted)pmStarted=true;}
 /* pacman keys */
 document.addEventListener("keydown",function(e){
     if(currentGame!=="pacman")return;
+    if(paused)return;
     if(e.code==="ArrowUp"||e.code==="KeyW")pmNextDir={x:0,y:-1};
     if(e.code==="ArrowDown"||e.code==="KeyS")pmNextDir={x:0,y:1};
     if(e.code==="ArrowLeft"||e.code==="KeyA")pmNextDir={x:-1,y:0};
@@ -994,11 +1006,12 @@ function initCheckers(){
     }}
     cv.addEventListener("click",checkersTap);
     cv.addEventListener("touchstart",checkersTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);drwCheckers();}
+    function run(){loopId=requestAnimationFrame(run);drwCheckers();if(paused)drwPause();}
     run();
 }
 function checkersTap(e){
     if(e.type==="touchstart")e.preventDefault();
+    if(paused)return;
     if(ckOver){initCheckers();return;}
     if(ckTurn!==1)return;
     var rect=cv.getBoundingClientRect();
@@ -1085,6 +1098,7 @@ function ckCheckWin(){
     if(p2===0){ckOver=true;ckMsg="You Win!";}
 }
 function ckAI(){
+    if(paused){setTimeout(ckAI,300);return;}
     if(ckOver||currentGame!=="checkers")return;
     /* get all moves for AI (player 2) */
     var allMoves=[];
@@ -1151,11 +1165,12 @@ function initChess(){
     ];
     cv.addEventListener("click",chessTap);
     cv.addEventListener("touchstart",chessTap,{passive:false});
-    function run(){loopId=requestAnimationFrame(run);drwChess();}
+    function run(){loopId=requestAnimationFrame(run);drwChess();if(paused)drwPause();}
     run();
 }
 function chessTap(e){
     if(e.type==="touchstart")e.preventDefault();
+    if(paused)return;
     if(chOver){initChess();return;}
     if(chTurn!==1)return;
     var rect=cv.getBoundingClientRect();
@@ -1271,6 +1286,7 @@ function chEval(board){
     return score;
 }
 function chAI(){
+    if(paused){setTimeout(chAI,250);return;}
     if(chOver||currentGame!=="chess")return;
     var moves=chAllMoves(chBoard,-1);
     if(moves.length===0){chCheckEnd();chTurn=1;return;}
