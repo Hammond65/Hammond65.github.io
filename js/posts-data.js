@@ -5,47 +5,47 @@ const blogPosts = [
         title: "Denoising Diffusion Probabilistic Models (DDPM)",
         tag: "Diffusion Models",
         date: "2026-03-15",
-        excerpt: "A deep dive into the foundations of diffusion models — how they work, why they avoid blurry results, and the evolution from U-Net to DiT architectures.",
+        excerpt: "How diffusion models work — adding noise, removing it step by step, and why the results look sharp instead of blurry.",
         file: "posts/ddpm.html"
     },
     {
         id: "arcface",
-        title: "ArcFace: Additive Angular Margin Loss for Deep Face Recognition",
+        title: "ArcFace: Angular Margin Loss for Face Recognition",
         tag: "Face Recognition",
         date: "2026-03-10",
-        excerpt: "Understanding how ArcFace creates discriminative face embeddings using angular margin loss, enabling robust identity comparison in 512-dimensional space.",
+        excerpt: "How ArcFace turns faces into 512 numbers and uses an angular margin to tell different people apart reliably.",
         file: "posts/arcface.html"
     },
     {
         id: "mimicmotion",
-        title: "MimicMotion: High-Quality Human Motion Video Generation",
+        title: "MimicMotion: Pose-Guided Human Video Generation",
         tag: "Video Generation",
         date: "2026-03-05",
-        excerpt: "Exploring pose-guided video generation with confidence-aware mechanisms, progressive latent fusion for long videos, and hand region enhancement.",
+        excerpt: "Making a still photo move by copying poses from another video, with better hands and smoother long videos.",
         file: "posts/mimicmotion.html"
     },
     {
         id: "lama",
-        title: "LaMa: Resolution-Robust Large Mask Inpainting with Fourier Convolutions",
+        title: "LaMa: Large Mask Inpainting with Fourier Convolutions",
         tag: "Image Inpainting",
         date: "2026-02-28",
-        excerpt: "How Fast Fourier Convolutions enable image inpainting networks to capture both local and global features, achieving resolution robustness with fewer parameters.",
+        excerpt: "How LaMa uses Fourier transforms to see the whole image at once, filling in large missing areas at any resolution.",
         file: "posts/lama.html"
     },
     {
         id: "consisid",
-        title: "ConsisID: Identity-Preserving Text-to-Video Generation",
+        title: "ConsisID: Keeping Faces Consistent in Generated Videos",
         tag: "Video Generation",
         date: "2026-02-20",
-        excerpt: "Decomposing facial identity into frequency components to preserve identity in DiT-based text-to-video generation using global and local facial extractors.",
+        excerpt: "How ConsisID splits face identity into big features and fine details to keep the same face throughout a generated video.",
         file: "posts/consisid.html"
     },
     {
         id: "text-diffusion",
-        title: "Text-Guided Image Generation with Prompt-to-Prompt Editing",
+        title: "How Text Controls Image Generation",
         tag: "Image Editing",
         date: "2026-02-15",
-        excerpt: "From CLIP text encoding to cross-attention control — understanding how text guides pixel generation and enables intuitive prompt-based image editing.",
+        excerpt: "How CLIP turns words into numbers, how cross-attention lets pixels read text, and how to edit images by changing just the prompt.",
         file: "posts/text-diffusion.html"
     }
 ];
