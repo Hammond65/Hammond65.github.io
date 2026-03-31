@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleece &amp; Shadows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;font-family:'Inter',sans-serif;color:#c8c3bc;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;user-select:none;-webkit-user-select:none}
+a{color:#7dd3fc;text-decoration:none;transition:opacity .2s}a:hover{opacity:.7}
+.top-bar{width:100%;max-width:900px;padding:1rem 1rem .5rem;display:flex;justify-content:space-between;align-items:center}
+.back-link{font-size:.9rem;font-weight:500;color:#7dd3fc}
+#app{width:100%;max-width:900px;padding:0 1rem 2rem;flex:1;display:flex;flex-direction:column;align-items:center}
+
+/* ---- screens ---- */
+.screen{display:none;width:100%;flex-direction:column;align-items:center;animation:fadeIn .5s ease}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-3px)}20%,40%,60%,80%{transform:translateX(3px)}}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+.shake{animation:shake .4s ease}
+
+/* ---- title screen ---- */
+.title-art{font-size:3rem;margin:2rem 0 .5rem;filter:drop-shadow(0 0 20px rgba(139,92,246,.3))}
+.title-name{font-size:2rem;font-weight:700;background:linear-gradient(135deg,#a78bfa,#c4b5fd,#e9d5ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.3rem}
+.title-sub{color:#64748b;font-size:.85rem;margin-bottom:2rem;text-align:center;max-width:400px;line-height:1.5}
+.btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#e2e8f0;padding:.7rem 2rem;font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;margin:.3rem}
+.btn:hover{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);transform:translateY(-2px);box-shadow:0 4px 20px rgba(167,139,250,.15)}
+.btn.primary{background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.4)}
+.btn.danger{border-color:rgba(248,113,113,.3)}
+.btn.danger:hover{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.5)}
+.btn:disabled{opacity:.35;cursor:default;transform:none!important;box-shadow:none!important}
+
+/* ---- combat screen ---- */
+.combat-wrap{width:100%;display:flex;flex-direction:column;gap:.8rem}
+.atmos-text{text-align:center;font-size:.8rem;color:#475569;font-style:italic;min-height:1.4em;animation:pulse 3s infinite}
+.enemy-area{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.6rem;position:relative;overflow:hidden}
+.enemy-sprite{font-size:4rem;filter:drop-shadow(0 0 30px rgba(139,92,246,.2));transition:transform .3s}
+.enemy-name{font-weight:700;font-size:1.1rem;color:#e2e8f0}
+.enemy-subtitle{font-size:.75rem;color:#64748b}
+.intent-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.3rem .8rem;font-size:.8rem;font-weight:600;margin-top:.2rem}
+.intent-badge.attack{border-color:rgba(248,113,113,.3);color:#fca5a5}
+.intent-badge.panic{border-color:rgba(250,204,21,.3);color:#fde047}
+.intent-badge.guard{border-color:rgba(96,165,250,.3);color:#93c5fd}
+.intent-badge.special{border-color:rgba(192,132,252,.3);color:#d8b4fe}
+.hp-bar-wrap{width:100%;max-width:300px}
+.hp-bar-label{font-size:.7rem;color:#94a3b8;margin-bottom:.2rem;display:flex;justify-content:space-between}
+.hp-bar{height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.hp-bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
+.hp-bar-fill.enemy{background:linear-gradient(90deg,#f87171,#dc2626)}
+.enemy-statuses{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;min-height:1.4em}
+.status-tag{font-size:.7rem;padding:.15rem .5rem;border-radius:6px;font-weight:600}
+.status-tag.debuff{background:rgba(248,113,113,.15);color:#fca5a5;border:1px solid rgba(248,113,113,.2)}
+.status-tag.buff{background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.2)}
+
+/* ---- player area ---- */
+.player-area{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+@media(max-width:600px){.player-area{grid-template-columns:1fr}}
+.resource-panel{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:1rem}
+.resource-panel h3{font-size:.8rem;color:#94a3b8;font-weight:600;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.05em}
+.res-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.res-icon{font-size:1.1rem;width:1.6rem;text-align:center}
+.res-info{flex:1}
+.res-label{font-size:.72rem;color:#94a3b8;display:flex;justify-content:space-between}
+.res-bar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:.15rem}
+.res-fill{height:100%;border-radius:4px;transition:width .3s ease}
+.res-fill.fluff{background:linear-gradient(90deg,#60a5fa,#3b82f6)}
+.res-fill.skin{background:linear-gradient(90deg,#f87171,#dc2626)}
+.res-fill.wp{background:linear-gradient(90deg,#a78bfa,#7c3aed)}
+.res-fill.panic-low{background:linear-gradient(90deg,#34d399,#059669)}
+.res-fill.panic-mid{background:linear-gradient(90deg,#fbbf24,#d97706)}
+.res-fill.panic-high{background:linear-gradient(90deg,#f87171,#dc2626)}
+.mutations-list{margin-top:.4rem}
+.mutation-tag{font-size:.68rem;padding:.15rem .45rem;border-radius:5px;background:rgba(167,139,250,.12);color:#c4b5fd;border:1px solid rgba(167,139,250,.2);margin:.15rem .2rem .15rem 0;display:inline-block}
+
+/* ---- abilities ---- */
+.abilities-panel{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:1rem}
+.abilities-panel h3{font-size:.8rem;color:#94a3b8;font-weight:600;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em}
+.ability-cat{margin-bottom:.5rem}
+.ability-cat-label{font-size:.68rem;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}
+.ability-btn{width:100%;text-align:left;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.5rem .7rem;margin-bottom:.35rem;cursor:pointer;transition:all .15s;font-family:inherit;color:#c8c3bc;font-size:.82rem}
+.ability-btn:hover:not(:disabled){background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);transform:translateX(3px)}
+.ability-btn:disabled{opacity:.3;cursor:default}
+.ability-btn .ab-name{font-weight:600;color:#e2e8f0}
+.ability-btn .ab-cost{font-size:.7rem;color:#a78bfa;margin-left:.4rem}
+.ability-btn .ab-desc{display:block;font-size:.7rem;color:#64748b;margin-top:.15rem}
+
+/* ---- combat log ---- */
+.log-panel{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:.8rem 1rem;max-height:140px;overflow-y:auto}
+.log-panel::-webkit-scrollbar{width:4px}.log-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.log-entry{font-size:.75rem;color:#64748b;padding:.15rem 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.log-entry:last-child{border-bottom:none}
+.log-entry.player-act{color:#93c5fd}
+.log-entry.enemy-act{color:#fca5a5}
+.log-entry.system{color:#a78bfa}
+.log-entry.heal{color:#34d399}
+
+/* ---- end turn ---- */
+.turn-controls{display:flex;gap:.6rem;justify-content:center;align-items:center;flex-wrap:wrap}
+.wp-display{font-size:.85rem;font-weight:600;color:#a78bfa}
+
+/* ---- mutation pick screen ---- */
+.mutation-pick{width:100%;max-width:700px}
+.mutation-pick h2{text-align:center;font-size:1.3rem;font-weight:700;color:#e2e8f0;margin-bottom:.3rem}
+.mutation-pick .mp-sub{text-align:center;font-size:.82rem;color:#64748b;margin-bottom:1.5rem}
+.mutation-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media(max-width:600px){.mutation-cards{grid-template-columns:1fr}}
+.mutation-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.2rem;cursor:pointer;transition:all .2s;text-align:center}
+.mutation-card:hover{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08);transform:translateY(-4px);box-shadow:0 8px 30px rgba(167,139,250,.1)}
+.mutation-card .mc-icon{font-size:2rem;margin-bottom:.5rem}
+.mutation-card .mc-name{font-weight:700;color:#e2e8f0;margin-bottom:.3rem}
+.mutation-card .mc-desc{font-size:.78rem;color:#94a3b8;line-height:1.4}
+.mutation-card .mc-type{font-size:.65rem;color:#7c3aed;font-weight:600;text-transform:uppercase;margin-top:.5rem;letter-spacing:.05em}
+
+/* ---- story screen ---- */
+.story-box{max-width:600px;text-align:center;padding:2rem 1rem}
+.story-box .s-icon{font-size:4rem;margin-bottom:1rem;filter:drop-shadow(0 0 30px rgba(139,92,246,.25))}
+.story-box h2{font-size:1.4rem;font-weight:700;color:#e2e8f0;margin-bottom:.5rem}
+.story-box .s-meta{font-size:.8rem;color:#7c3aed;font-weight:600;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.05em}
+.story-box .s-text{font-size:.88rem;color:#94a3b8;line-height:1.7;margin-bottom:1.5rem}
+.story-box .s-flavor{font-size:.78rem;color:#475569;font-style:italic;margin-bottom:1.5rem}
+
+/* ---- game over / victory ---- */
+.end-box{max-width:500px;text-align:center;padding:2rem 1rem}
+.end-box .e-icon{font-size:5rem;margin-bottom:1rem}
+.end-box h2{font-size:1.6rem;font-weight:700;color:#e2e8f0;margin-bottom:.5rem}
+.end-box .e-sub{font-size:.9rem;color:#94a3b8;margin-bottom:.5rem;line-height:1.5}
+.end-box .e-stats{font-size:.8rem;color:#64748b;margin-bottom:1.5rem}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <a href="dino.html" class="back-link">← Back to Arcade</a>
+</div>
+
+<div id="app">
+    <!-- TITLE SCREEN -->
+    <div class="screen active" id="scrTitle">
+        <div class="title-art">🐑</div>
+        <div class="title-name">Fleece &amp; Shadows</div>
+        <div class="title-sub">
+            In the Dream Pen — a fog-choked limbo inside a dead sheep's mind — you must confront the shadows of every creature that ever caused you pain.
+            Only by facing them can you find peace.
+        </div>
+        <button class="btn primary" onclick="G.startRun()">Begin the Dream</button>
+    </div>
+
+    <!-- STORY SCREEN -->
+    <div class="screen" id="scrStory">
+        <div class="story-box" id="storyBox"></div>
+    </div>
+
+    <!-- COMBAT SCREEN -->
+    <div class="screen" id="scrCombat">
+        <div class="combat-wrap">
+            <div class="atmos-text" id="atmosText"></div>
+            <div class="enemy-area" id="enemyArea">
+                <div class="enemy-sprite" id="enemySprite"></div>
+                <div class="enemy-name" id="enemyName"></div>
+                <div class="enemy-subtitle" id="enemySub"></div>
+                <div id="intentBadge"></div>
+                <div class="hp-bar-wrap">
+                    <div class="hp-bar-label"><span id="enemyHpLabel">HP</span><span id="enemyHpNum"></span></div>
+                    <div class="hp-bar"><div class="hp-bar-fill enemy" id="enemyHpBar"></div></div>
+                </div>
+                <div class="enemy-statuses" id="enemyStatuses"></div>
+            </div>
+            <div class="player-area">
+                <div class="resource-panel">
+                    <h3>Resources</h3>
+                    <div class="res-row"><span class="res-icon">🛡️</span><div class="res-info"><div class="res-label"><span>Fluff (Armor)</span><span id="fluffNum"></span></div><div class="res-bar"><div class="res-fill fluff" id="fluffBar"></div></div></div></div>
+                    <div class="res-row"><span class="res-icon">❤️</span><div class="res-info"><div class="res-label"><span>Skin (True HP)</span><span id="skinNum"></span></div><div class="res-bar"><div class="res-fill skin" id="skinBar"></div></div></div></div>
+                    <div class="res-row"><span class="res-icon">⚡</span><div class="res-info"><div class="res-label"><span>Willpower</span><span id="wpNum"></span></div><div class="res-bar"><div class="res-fill wp" id="wpBar"></div></div></div></div>
+                    <div class="res-row"><span class="res-icon">😨</span><div class="res-info"><div class="res-label"><span>Panic</span><span id="panicNum"></span></div><div class="res-bar"><div class="res-fill" id="panicBar"></div></div></div></div>
+                    <div class="mutations-list" id="mutationsList"></div>
+                </div>
+                <div class="abilities-panel" id="abilitiesPanel">
+                    <h3>Abilities</h3>
+                    <div id="abilityButtons"></div>
+                </div>
+            </div>
+            <div class="turn-controls">
+                <span class="wp-display" id="wpDisplay"></span>
+                <button class="btn" id="endTurnBtn" onclick="G.endTurn()">End Turn</button>
+            </div>
+            <div class="log-panel" id="logPanel"></div>
+        </div>
+    </div>
+
+    <!-- MUTATION PICK SCREEN -->
+    <div class="screen" id="scrMutation">
+        <div class="mutation-pick">
+            <h2>Memory Fragment</h2>
+            <p class="mp-sub">A piece of the past takes new shape. Choose one to carry forward.</p>
+            <div class="mutation-cards" id="mutationCards"></div>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div class="screen" id="scrEnd">
+        <div class="end-box" id="endBox"></div>
+    </div>
+</div>
+
+<script>
+/* =============================================================
+   FLEECE & SHADOWS — A Roguelike Turn-Based Combat Game
+   Pure DOM + CSS, zero dependencies, zero network calls.
+   ============================================================= */
+(function(){
+"use strict";
+
+/* ============================================================
+   DATA: Enemies, Abilities, Mutations, Story
+   ============================================================ */
+
+var LEVELS = [
+    {
+        id:"rat", name:"The Shadow Rat", subtitle:"The Nightly Fear",
+        sprite:"🐀", hp:38, maxFluffCut:0,
+        atmosphere:["Tiny claws scratch inside the walls...","Something skitters in the dark...","The smell of damp straw fills the air...","A chorus of squeaking echoes around you..."],
+        intro:{
+            icon:"🐀",title:"The Shadow Rat",meta:"Level 1 — The Nightly Fear",
+            text:"You remember the barn. The darkness. Every night, the scratching came — tiny claws on wood, on stone, on your fleece. They never stopped. In the Dream Pen, the scratching has become something worse. The Rat is no longer small. It is every sleepless night, every creeping anxiety given form.",
+            flavor:"\"They were always there. Even when you couldn't see them, you could hear them. Scratch. Scratch. Scratch.\""
+        },
+        ai:function(en, pl, turn){
+            /* Rat attacks 3-4 times for low damage; occasionally panics */
+            if(turn % 4 === 0) return {type:"panic",icon:"💀",label:"Swarm Shriek",panicAdd:15,desc:"The rats shriek in unison, raising your panic."};
+            return {type:"attack",icon:"⚔️",label:"Gnawing Swarm",hits:3+Math.floor(Math.random()*2),dmg:2,desc:"The swarm bites you repeatedly!"};
+        }
+    },
+    {
+        id:"crab", name:"The River Crab", subtitle:"The Unexpected Pain",
+        sprite:"🦀", hp:52, maxFluffCut:0,
+        atmosphere:["Water bubbles softly... or is it laughter?","Fog rolls across the phantom riverbank...","A sharp SNAP echoes from the mist...","The water is cold. The crab is patient."],
+        intro:{
+            icon:"🦀",title:"The River Crab",meta:"Level 2 — The Unexpected Pain",
+            text:"The river was supposed to be safe. Cool water on a hot day, the gentle current against your legs. Then came the pain — sudden, sharp, bewildering. The Crab taught you that nowhere is truly safe. In the Dream Pen, it waits beneath still water, its shell harder than memory.",
+            flavor:"\"You went to the river seeking comfort. What you found was the understanding that pain hides in peaceful places.\""
+        },
+        ai:function(en, pl, turn){
+            if(en.shell){
+                en.shell = false;
+                return {type:"attack",icon:"⚔️",label:"Pincer Crush",hits:1,dmg:14,desc:"The Crab opens its shell and strikes with devastating force!",snare:true};
+            }
+            if(turn % 3 === 0){
+                en.shell = true;
+                return {type:"guard",icon:"🛡️",label:"Hard Shell",desc:"The Crab retreats into its shell. Attacks bounce off!",reflectDmg:4};
+            }
+            if(Math.random()<.35) return {type:"panic",icon:"💀",label:"Claw Snap",panicAdd:12,desc:"A sudden snap startles you."};
+            return {type:"attack",icon:"⚔️",label:"Side Pinch",hits:1,dmg:7,desc:"The Crab pinches you from the side!"};
+        }
+    },
+    {
+        id:"dog", name:"The Herding Dog", subtitle:"The Relentless Exhaustion",
+        sprite:"🐕", hp:45, maxFluffCut:0,
+        atmosphere:["Barking. Always barking.","The field stretches forever in every direction...","Your legs ache from running...","The dog's eyes never leave you."],
+        intro:{
+            icon:"🐕",title:"The Herding Dog",meta:"Level 3 — The Relentless Exhaustion",
+            text:"Every morning, the barking. Every day, the running. The Dog never tired, never relented, never allowed you to rest. It drove you where it wanted, snapping at your heels if you hesitated. In the Dream Pen, the Dog's bark shakes reality itself. It doesn't need to bite — the sound alone is enough to break your will.",
+            flavor:"\"Run. Stop. Run again. The Dog doesn't care where you go, only that you never stop.\""
+        },
+        ai:function(en, pl, turn){
+            /* Dog focuses on panic; dodges 50% */
+            if(Math.random()<.6) return {type:"panic",icon:"💀",label:"Relentless Bark",panicAdd:25,desc:"The Dog barks furiously! The sound rattles your bones."};
+            if(Math.random()<.4) return {type:"attack",icon:"⚔️",label:"Nipping Bite",hits:2,dmg:3,dodge:true,desc:"The Dog darts in and bites, then dodges away!"};
+            return {type:"attack",icon:"⚔️",label:"Tackle",hits:1,dmg:6,desc:"The Dog slams into you!"};
+        }
+    },
+    {
+        id:"wolf", name:"The Howling Wolf", subtitle:"The Deep Trauma",
+        sprite:"🐺", hp:65, maxFluffCut:0,
+        atmosphere:["Yellow eyes gleam in the pitch darkness...","A low growl vibrates through the ground...","The forest is silent. Too silent.","The howl comes from everywhere and nowhere."],
+        intro:{
+            icon:"🐺",title:"The Howling Wolf",meta:"Level 4 — The Deep Trauma",
+            text:"The Wolf is the oldest fear. Before the barn, before the river, before the field — there was the forest. The Wolf is pure predation, the primal terror that lives in every prey animal's bones. In the Dream Pen, it stalks you through an endless black forest, patient and inevitable.",
+            flavor:"\"You never saw the Wolf clearly. You only ever saw the eyes. That was enough.\""
+        },
+        ai:function(en, pl, turn){
+            /* Wolf cycles: stalk, stalk, JAWS */
+            if(!en.stalkCount) en.stalkCount = 0;
+            if(en.stalkCount >= 2){
+                en.stalkCount = 0;
+                return {type:"special",icon:"☠️",label:"Jaws of Trauma",hits:1,dmg:35,desc:"The Wolf lunges with everything it has! MASSIVE DAMAGE!"};
+            }
+            en.stalkCount++;
+            if(Math.random()<.4) return {type:"panic",icon:"💀",label:"Piercing Howl",panicAdd:20,desc:"A howl freezes your blood."};
+            return {type:"guard",icon:"🛡️",label:"Stalking...",desc:"The Wolf circles, watching, waiting...",stalk:true};
+        }
+    },
+    {
+        id:"human", name:"The Tall Figure", subtitle:"The Inescapable Fate",
+        sprite:"👤", hp:80, maxFluffCut:5,
+        atmosphere:["A shadow stretches impossibly long...","The scent of steel and clean straw...","Gentle hands. Cold intentions.","The shepherd's crook catches the dim light."],
+        intro:{
+            icon:"👤",title:"The Tall Figure",meta:"Final Level — The Inescapable Fate",
+            text:"You know this shape. The one who fed you, sheltered you, protected you from the Wolf. The one whose hands were gentle. The one who, in the end, led you down a path from which there was no return. In the Dream Pen, the Human is a silhouette — featureless, towering, holding a crook that could be a scythe.",
+            flavor:"\"They called it mercy. They called it necessity. They called it natural. They never asked you what you called it.\""
+        },
+        ai:function(en, pl, turn){
+            if(turn % 5 === 0) return {type:"special",icon:"✂️",label:"The Shears",hits:1,dmg:8,shear:true,desc:"The Human cuts away your fleece! Your maximum Fluff is reduced!"};
+            if(turn % 3 === 0) return {type:"special",icon:"🪝",label:"The Crook",hits:0,dmg:0,crook:true,panicAdd:10,desc:"The Crook pulls you from your stance! Defensive buffs removed!"};
+            if(Math.random()<.3) return {type:"panic",icon:"💀",label:"Silent Stare",panicAdd:18,desc:"The Figure stares at you in silence. The weight is unbearable."};
+            return {type:"attack",icon:"⚔️",label:"Measured Strike",hits:1,dmg:10,desc:"A calm, deliberate blow."};
+        }
+    }
+];
+
+var ABILITIES = [
+    /* Wool Skills (Defense) */
+    {id:"fleeceRoll",name:"Fleece Roll",cat:"wool",cost:1,desc:"Gain 10 Fluff armor.",
+        use:function(p,e){p.fluff=Math.min(p.maxFluff,p.fluff+10+(p.mut.thickWool?5:0));return{msg:"You roll into a ball! +"+((p.mut.thickWool)?15:10)+" Fluff.",cls:"player-act"};}},
+    {id:"staticRub",name:"Static Rub",cat:"wool",cost:1,desc:"Gain 5 Fluff, +1 Static Charge.",
+        use:function(p,e){p.fluff=Math.min(p.maxFluff,p.fluff+5);var ch=p.mut.rubberHooves?2:1;p.staticCharges+=ch;return{msg:"You rub your hooves! +5 Fluff, +"+ch+" Static Charge"+(p.staticCharges>1?"s":"")+".",cls:"player-act"};}},
+    {id:"tangle",name:"Tangle",cat:"wool",cost:2,desc:"Shed wool to slow the enemy. Attacks deal -20% dmg.",
+        use:function(p,e){e.statuses.slowed=3;return{msg:"You shed tangling wool! Enemy is Slowed for 3 turns.",cls:"player-act"};}},
+    {id:"woolenWall",name:"Woolen Wall",cat:"wool",cost:2,desc:"Gain Fluff equal to 50% of max. Lose 1 Static Charge.",
+        use:function(p,e){var g=Math.floor(p.maxFluff*.5);p.fluff=Math.min(p.maxFluff,p.fluff+g);if(p.staticCharges>0)p.staticCharges--;return{msg:"A wall of wool surrounds you! +"+g+" Fluff.",cls:"player-act"};}},
+
+    /* Hoof & Horn Skills (Attack) */
+    {id:"headbutt",name:"Basic Headbutt",cat:"hoof",cost:1,desc:"Deal 5 damage.",
+        use:function(p,e){var d=5+(p.mut.ironHooves?3:0);d=applyDmgMods(d,p,e);dealDmg(e,d);return{msg:"You headbutt the shadow! "+d+" damage.",cls:"player-act"};}},
+    {id:"thunderCharge",name:"Thunderous Charge",cat:"hoof",cost:2,desc:"Deal 8 dmg. If Static Charge: +10 lightning dmg & Stun.",
+        use:function(p,e){var d=8;d=applyDmgMods(d,p,e);dealDmg(e,d);var msg="You charge! "+d+" damage.";if(p.staticCharges>0){var bonus=10;bonus=applyDmgMods(bonus,p,e);dealDmg(e,bonus);p.staticCharges--;e.statuses.stunned=1;msg="THUNDER! "+(d+bonus)+" damage + Stun!";}return{msg:msg,cls:"player-act"};}},
+    {id:"desperateKick",name:"Desperate Kick",cat:"hoof",cost:1,desc:"Deal 15 massive dmg. Only usable at Panic ≥ 70%.",
+        check:function(p){return p.panic >= (p.mut.desperateResolve?50:70);},
+        use:function(p,e){var d=15;d=applyDmgMods(d,p,e);dealDmg(e,d);return{msg:"DESPERATE KICK! "+d+" damage!",cls:"player-act"};}},
+    {id:"hornGore",name:"Horn Gore",cat:"hoof",cost:2,desc:"Deal 12 dmg. If enemy HP < 50%, deal double.",
+        use:function(p,e){var d=12;if(e.hp<e.maxHp*.5)d*=2;d=applyDmgMods(d,p,e);dealDmg(e,d);return{msg:"You gore with your horns! "+d+" damage"+(e.hp<e.maxHp*.5?" (Executioner!)":"")+".",cls:"player-act"};}},
+
+    /* Vocal Skills (Control & Heal) */
+    {id:"deepBreath",name:"Deep Breath",cat:"vocal",cost:1,desc:"Lower Panic by 30%.",
+        use:function(p,e){p.panic=Math.max(0,p.panic-30);return{msg:"You breathe deeply... Panic -30%.",cls:"heal"};}},
+    {id:"braveBaa",name:"Brave Baa",cat:"vocal",cost:2,desc:"Panic -10%. Intimidate enemy: next attack -50% dmg.",
+        use:function(p,e){p.panic=Math.max(0,p.panic-10);e.statuses.intimidated=1;return{msg:"BAAAA! Panic -10%, enemy Intimidated!",cls:"player-act"};}},
+    {id:"echoBleat",name:"Echoing Bleat",cat:"vocal",cost:2,desc:"If enemy Slowed: they take 2x dmg for 2 turns.",
+        check:function(p,e){return e && e.statuses && e.statuses.slowed > 0;},
+        use:function(p,e){e.statuses.vulnerable=2;return{msg:"Your bleat shatters their defenses! Enemy takes DOUBLE damage for 2 turns!",cls:"player-act"};}},
+    {id:"gentleHum",name:"Gentle Hum",cat:"vocal",cost:1,desc:"Heal 3 Skin. Panic +5%.",
+        use:function(p,e){var h=3+(p.mut.gentleSoul?2:0);p.skin=Math.min(p.maxSkin,p.skin+h);p.panic=Math.min(100,p.panic+5);return{msg:"A soft hum... +"+h+" Skin, but Panic +5%.",cls:"heal"};}}
+];
+
+var ALL_MUTATIONS = [
+    {id:"spikyWool",name:"Spiky Wool",icon:"🦔",desc:"When enemies break through your Fluff, they take 5 damage.",type:"Defense",key:"spikyWool"},
+    {id:"traumaHarness",name:"Trauma Harness",icon:"⚡",desc:"At 100% Panic, you don't get paralyzed. Instead, abilities cost 0 WP but you take 5 Skin damage per turn.",type:"Risk",key:"traumaHarness"},
+    {id:"rubberHooves",name:"Rubber Hooves",icon:"🔌",desc:"Static Rub gives 2 charges instead of 1. Enables stun-lock builds.",type:"Offense",key:"rubberHooves"},
+    {id:"thickHide",name:"Thick Hide",icon:"🧱",desc:"+8 max Skin. Immediately heal 4 Skin.",type:"Defense",key:"thickHide"},
+    {id:"echoingMemory",name:"Echoing Memory",icon:"🔊",desc:"Vocal skills cost 1 less WP (minimum 0).",type:"Utility",key:"echoingMemory"},
+    {id:"ironHooves",name:"Iron Hooves",icon:"🔨",desc:"Basic Headbutt deals +3 extra damage.",type:"Offense",key:"ironHooves"},
+    {id:"desperateResolve",name:"Desperate Resolve",icon:"💢",desc:"Desperate Kick usable at 50% Panic instead of 70%.",type:"Utility",key:"desperateResolve"},
+    {id:"calmHeart",name:"Calm Heart",icon:"💚",desc:"Max Panic is 80%. You can never be paralyzed.",type:"Defense",key:"calmHeart"},
+    {id:"secondWind",name:"Second Wind",icon:"💨",desc:"Heal 3 Skin at the start of each combat.",type:"Sustain",key:"secondWind"},
+    {id:"thickWool",name:"Thick Wool",icon:"🐏",desc:"Fleece Roll gives +5 extra Fluff.",type:"Defense",key:"thickWool"},
+    {id:"berserkerFleece",name:"Berserker Fleece",icon:"🔥",desc:"At Panic ≥ 60%, all attacks deal +4 damage.",type:"Risk",key:"berserkerFleece"},
+    {id:"gentleSoul",name:"Gentle Soul",icon:"🌿",desc:"Gentle Hum heals +2 extra Skin.",type:"Sustain",key:"gentleSoul"},
+    {id:"staticAura",name:"Static Aura",icon:"⚡",desc:"Start each combat with 2 Static Charges.",type:"Offense",key:"staticAura"},
+    {id:"woolenResilience",name:"Woolen Resilience",icon:"🧶",desc:"+15 max Fluff capacity.",type:"Defense",key:"woolenResilience"},
+    {id:"nightmareAdapt",name:"Nightmare Adaptation",icon:"🌙",desc:"Take 2 less damage from all sources (min 1).",type:"Defense",key:"nightmareAdapt"}
+];
+
+/* ============================================================
+   GAME ENGINE
+   ============================================================ */
+
+var state = null; /* null = no active run */
+
+function newState(){
+    return {
+        level: 0,
+        skin: 30, maxSkin: 30,
+        fluff: 0, maxFluff: 40,
+        wp: 3, maxWp: 3,
+        panic: 0,
+        staticCharges: 0,
+        mutations: [], /* array of mutation keys */
+        mut: {}, /* quick lookup: mut.spikyWool = true */
+        enemy: null,
+        turn: 0,
+        playerTurn: true,
+        log: [],
+        usedMutationIds: [], /* track which mutations have been offered */
+        paralyzed: false,
+        totalDmgDealt: 0,
+        totalDmgTaken: 0,
+        turnsPlayed: 0
+    };
+}
+
+function applyDmgMods(baseDmg, player, enemy){
+    var d = baseDmg;
+    if(player.panic >= 70) d = Math.floor(d * 1.5);
+    if(player.mut.berserkerFleece && player.panic >= 60) d += 4;
+    if(enemy.statuses.vulnerable > 0) d *= 2;
+    return Math.max(1, Math.floor(d));
+}
+
+function dealDmg(enemy, dmg){
+    if(enemy.statuses.guarding){
+        addLog({msg:"The attack bounces off the shell! You take "+enemy.reflectDmg+" damage!",cls:"enemy-act"});
+        takeDmg(state, enemy.reflectDmg || 3);
+        return;
+    }
+    enemy.hp = Math.max(0, enemy.hp - dmg);
+    state.totalDmgDealt += dmg;
+}
+
+function takeDmg(pl, rawDmg){
+    var dmg = rawDmg;
+    if(pl.mut.nightmareAdapt) dmg = Math.max(1, dmg - 2);
+    if(pl.enemy && pl.enemy.statuses.slowed > 0) dmg = Math.floor(dmg * 0.8);
+    if(pl.enemy && pl.enemy.statuses.intimidated > 0) dmg = Math.floor(dmg * 0.5);
+    if(pl.panic >= 70 && !pl.mut.traumaHarness) dmg = Math.floor(dmg * 1.5);
+
+    /* damage goes through Fluff first */
+    var fluffBefore = pl.fluff;
+    if(pl.fluff > 0){
+        if(dmg <= pl.fluff){
+            pl.fluff -= dmg;
+            dmg = 0;
+        } else {
+            dmg -= pl.fluff;
+            pl.fluff = 0;
+        }
+    }
+    /* remaining goes to Skin */
+    if(dmg > 0){
+        pl.skin = Math.max(0, pl.skin - dmg);
+    }
+    /* spiky wool check */
+    if(pl.mut.spikyWool && fluffBefore > 0 && pl.fluff === 0 && pl.enemy){
+        pl.enemy.hp = Math.max(0, pl.enemy.hp - 5);
+        addLog({msg:"Spiky Wool retaliates for 5 damage!",cls:"system"});
+    }
+    pl.totalDmgTaken += rawDmg;
+}
+
+function addLog(entry){
+    if(!state) return;
+    state.log.push(entry);
+    renderLog();
+}
+
+/* ============================================================
+   COMBAT FLOW
+   ============================================================ */
+
+function startCombat(){
+    var lvl = LEVELS[state.level];
+    state.enemy = {
+        hp: lvl.hp + state.level * 5,
+        maxHp: lvl.hp + state.level * 5,
+        statuses: {},
+        shell: false,
+        stalkCount: 0,
+        reflectDmg: 0,
+        dodge: lvl.id === "dog",
+        nextAction: null
+    };
+    state.turn = 0;
+    state.fluff = 0;
+    state.wp = state.maxWp;
+    state.panic = 0;
+    state.staticCharges = state.mut.staticAura ? 2 : 0;
+    state.paralyzed = false;
+    state.log = [];
+
+    if(state.mut.secondWind){
+        state.skin = Math.min(state.maxSkin, state.skin + 3);
+        addLog({msg:"Second Wind: +3 Skin.",cls:"heal"});
+    }
+
+    /* roll first enemy intent */
+    state.enemy.nextAction = LEVELS[state.level].ai(state.enemy, state, 0);
+
+    showScreen("scrCombat");
+    renderCombat();
+}
+
+function beginPlayerTurn(){
+    state.turn++;
+    state.turnsPlayed++;
+    state.wp = state.maxWp;
+    state.playerTurn = true;
+    state.paralyzed = false;
+
+    /* Panic paralysis check */
+    var maxPanic = state.mut.calmHeart ? 80 : 100;
+    if(state.panic >= maxPanic && !state.mut.traumaHarness){
+        state.paralyzed = true;
+        state.panic = Math.max(0, state.panic - 20);
+        addLog({msg:"PARALYZED BY FEAR! You freeze and lose your turn. Panic drops to "+state.panic+"%.",cls:"enemy-act"});
+        setTimeout(function(){ enemyTurn(); }, 1200);
+        renderCombat();
+        return;
+    }
+
+    /* Trauma harness penalty */
+    if(state.mut.traumaHarness && state.panic >= 100){
+        state.skin = Math.max(0, state.skin - 5);
+        state.wp = 99; /* free abilities */
+        addLog({msg:"Trauma Harness: Pain and rage fuel you! 0 WP cost, but -5 Skin.",cls:"system"});
+        if(state.skin <= 0){ gameOver(false); return; }
+    }
+
+    /* Tick down enemy statuses */
+    var es = state.enemy.statuses;
+    for(var k in es){ if(es.hasOwnProperty(k) && typeof es[k] === "number" && es[k] > 0) es[k]--; }
+
+    renderCombat();
+}
+
+function useAbility(idx){
+    if(!state || !state.playerTurn || state.paralyzed) return;
+    var ab = ABILITIES[idx];
+    var cost = ab.cost;
+    if(state.mut.echoingMemory && ab.cat === "vocal") cost = Math.max(0, cost - 1);
+    if(state.mut.traumaHarness && state.panic >= 100) cost = 0;
+
+    if(state.wp < cost) return;
+    if(ab.check && !ab.check(state, state.enemy)) return;
+
+    state.wp -= cost;
+    var result = ab.use(state, state.enemy);
+    addLog(result);
+
+    /* clamp panic */
+    var maxP = state.mut.calmHeart ? 80 : 100;
+    state.panic = Math.min(maxP, Math.max(0, state.panic));
+
+    /* check enemy death */
+    if(state.enemy.hp <= 0){
+        enemyDefeated();
+        return;
+    }
+
+    renderCombat();
+}
+
+function endTurn(){
+    if(!state || !state.playerTurn || state.paralyzed) return;
+    state.playerTurn = false;
+    setTimeout(function(){ enemyTurn(); }, 600);
+    renderCombat();
+}
+
+function enemyTurn(){
+    if(!state || !state.enemy || state.enemy.hp <= 0) return;
+    var action = state.enemy.nextAction;
+    if(!action) action = {type:"attack",icon:"⚔️",label:"Attack",hits:1,dmg:5,desc:"The shadow strikes!"};
+
+    addLog({msg:action.desc, cls:"enemy-act"});
+
+    /* Check if stunned */
+    if(state.enemy.statuses.stunned > 0){
+        addLog({msg:"The enemy is STUNNED and cannot act!",cls:"system"});
+        state.enemy.statuses.stunned = 0;
+        rollNextIntent();
+        beginPlayerTurn();
+        return;
+    }
+
+    if(action.type === "attack" || action.type === "special"){
+        /* dodge check for dog */
+        var dodgeChance = (state.enemy.dodge && !state.enemy.statuses.slowed) ? 0 : 0; /* dodge is handled differently — dog's moves have dodge property */
+
+        var hits = action.hits || 1;
+        var totalDmg = 0;
+        for(var i = 0; i < hits; i++){
+            totalDmg += action.dmg;
+        }
+        takeDmg(state, totalDmg);
+        addLog({msg:"You take "+totalDmg+" damage!",cls:"enemy-act"});
+
+        if(action.shear && state.maxFluff > 10){
+            var cut = LEVELS[state.level].maxFluffCut || 5;
+            state.maxFluff = Math.max(10, state.maxFluff - cut);
+            state.fluff = Math.min(state.fluff, state.maxFluff);
+            addLog({msg:"The Shears cut away your fleece! Max Fluff reduced by "+cut+"!",cls:"enemy-act"});
+        }
+
+        if(action.crook){
+            state.fluff = Math.max(0, state.fluff - 10);
+            state.staticCharges = 0;
+            var es2 = state.enemy.statuses;
+            delete es2.slowed;
+            delete es2.intimidated;
+            addLog({msg:"The Crook strips your defenses!",cls:"enemy-act"});
+        }
+
+        if(action.snare){
+            addLog({msg:"Pincer Snare! You cannot use Hoof skills next turn.",cls:"enemy-act"});
+            state.snared = true;
+        } else {
+            state.snared = false;
+        }
+
+        shakeEnemy();
+    }
+
+    if(action.type === "panic" || action.panicAdd){
+        var pa = action.panicAdd || 15;
+        var maxP = state.mut.calmHeart ? 80 : 100;
+        state.panic = Math.min(maxP, state.panic + pa);
+        addLog({msg:"Panic rises by "+pa+"% → "+state.panic+"%!",cls:"enemy-act"});
+    }
+
+    if(action.type === "guard"){
+        if(action.reflectDmg){
+            state.enemy.statuses.guarding = 1;
+            state.enemy.reflectDmg = action.reflectDmg;
+        }
+        if(action.stalk){
+            /* Wolf stalking — no additional effect, just building up */
+        }
+    }
+
+    /* Check player death */
+    if(state.skin <= 0){
+        gameOver(false);
+        return;
+    }
+
+    /* Roll next intent */
+    rollNextIntent();
+
+    /* Begin next player turn */
+    beginPlayerTurn();
+}
+
+function rollNextIntent(){
+    if(!state || !state.enemy) return;
+    state.enemy.nextAction = LEVELS[state.level].ai(state.enemy, state, state.turn + 1);
+}
+
+function enemyDefeated(){
+    var lvl = LEVELS[state.level];
+    addLog({msg:lvl.name + " fades into mist...",cls:"system"});
+    renderCombat();
+
+    setTimeout(function(){
+        if(state.level >= LEVELS.length - 1){
+            gameOver(true);
+        } else {
+            showMutationPick();
+        }
+    }, 1500);
+}
+
+function gameOver(victory){
+    var el = document.getElementById("endBox");
+    if(victory){
+        el.innerHTML = '<div class="e-icon">🌅</div>'+
+            '<h2>Peace Found</h2>'+
+            '<p class="e-sub">You have confronted every shadow. The Dream Pen dissolves into warm light. The scratching, the snapping, the barking, the howling, the silence — they fade. Not forgotten, but forgiven.</p>'+
+            '<p class="e-sub"><em>"In the end, the sheep does not escape. It understands. And in understanding, it is free."</em></p>'+
+            '<p class="e-stats">Damage dealt: '+state.totalDmgDealt+' · Damage taken: '+state.totalDmgTaken+' · Turns survived: '+state.turnsPlayed+'<br>Mutations: '+state.mutations.length+'</p>'+
+            '<button class="btn primary" onclick="G.startRun()">Dream Again</button>'+
+            '<button class="btn" onclick="G.toTitle()" style="margin-top:.3rem">Title Screen</button>';
+    } else {
+        el.innerHTML = '<div class="e-icon">💀</div>'+
+            '<h2>Consumed by Shadow</h2>'+
+            '<p class="e-sub">The darkness closes in. The pain was too much, the fear too great. The sheep\'s spirit fragments, scattered across the Dream Pen to relive its suffering forever... unless it tries again.</p>'+
+            '<p class="e-stats">Fell to: '+LEVELS[state.level].name+' · Damage dealt: '+state.totalDmgDealt+' · Turns survived: '+state.turnsPlayed+'</p>'+
+            '<button class="btn primary" onclick="G.startRun()">Try Again</button>'+
+            '<button class="btn" onclick="G.toTitle()" style="margin-top:.3rem">Title Screen</button>';
+    }
+    showScreen("scrEnd");
+}
+
+function showMutationPick(){
+    /* offer 3 mutations not yet taken */
+    var available = ALL_MUTATIONS.filter(function(m){
+        return state.mutations.indexOf(m.key) === -1;
+    });
+    /* shuffle */
+    for(var i = available.length - 1; i > 0; i--){
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = available[i]; available[i] = available[j]; available[j] = tmp;
+    }
+    var picks = available.slice(0, 3);
+    var container = document.getElementById("mutationCards");
+    container.innerHTML = "";
+    for(var k = 0; k < picks.length; k++){
+        (function(mut){
+            var card = document.createElement("div");
+            card.className = "mutation-card";
+            card.innerHTML = '<div class="mc-icon">'+mut.icon+'</div><div class="mc-name">'+mut.name+'</div><div class="mc-desc">'+esc(mut.desc)+'</div><div class="mc-type">'+esc(mut.type)+'</div>';
+            card.addEventListener("click", function(){
+                state.mutations.push(mut.key);
+                state.mut[mut.key] = true;
+                /* apply immediate effects */
+                if(mut.key === "thickHide"){ state.maxSkin += 8; state.skin = Math.min(state.maxSkin, state.skin + 4); }
+                if(mut.key === "woolenResilience"){ state.maxFluff += 15; }
+                /* advance to next level */
+                state.level++;
+                showStory(state.level);
+            });
+            container.appendChild(card);
+        })(picks[k]);
+    }
+    showScreen("scrMutation");
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+
+function showScreen(id){
+    var screens = document.querySelectorAll(".screen");
+    for(var i = 0; i < screens.length; i++) screens[i].classList.remove("active");
+    document.getElementById(id).classList.add("active");
+}
+
+function showStory(levelIdx){
+    var lvl = LEVELS[levelIdx];
+    var box = document.getElementById("storyBox");
+    box.innerHTML = '<div class="s-icon">'+lvl.intro.icon+'</div>'+
+        '<h2>'+esc(lvl.intro.title)+'</h2>'+
+        '<div class="s-meta">'+esc(lvl.intro.meta)+'</div>'+
+        '<p class="s-text">'+esc(lvl.intro.text)+'</p>'+
+        '<p class="s-flavor">'+esc(lvl.intro.flavor)+'</p>'+
+        '<button class="btn primary" onclick="G.enterCombat()">Face the Shadow</button>';
+    showScreen("scrStory");
+}
+
+function renderCombat(){
+    if(!state || !state.enemy) return;
+    var lvl = LEVELS[state.level];
+    var en = state.enemy;
+
+    /* atmosphere */
+    var atIdx = Math.floor(Math.random() * lvl.atmosphere.length);
+    document.getElementById("atmosText").textContent = lvl.atmosphere[atIdx];
+
+    /* enemy */
+    document.getElementById("enemySprite").textContent = lvl.sprite;
+    document.getElementById("enemyName").textContent = lvl.name;
+    document.getElementById("enemySub").textContent = lvl.subtitle;
+    document.getElementById("enemyHpNum").textContent = en.hp + " / " + en.maxHp;
+    document.getElementById("enemyHpBar").style.width = (en.hp / en.maxHp * 100) + "%";
+
+    /* intent */
+    var intent = en.nextAction;
+    var ib = document.getElementById("intentBadge");
+    if(intent){
+        var icls = "intent-badge";
+        if(intent.type === "attack") icls += " attack";
+        else if(intent.type === "panic") icls += " panic";
+        else if(intent.type === "guard") icls += " guard";
+        else icls += " special";
+        ib.innerHTML = '<div class="'+icls+'">'+intent.icon+' Intent: '+esc(intent.label)+'</div>';
+    } else {
+        ib.innerHTML = "";
+    }
+
+    /* enemy statuses */
+    var esEl = document.getElementById("enemyStatuses");
+    esEl.innerHTML = "";
+    var statNames = {slowed:"Slowed",stunned:"Stunned",intimidated:"Intimidated",vulnerable:"Vulnerable",guarding:"Guarding"};
+    for(var sk in en.statuses){
+        if(en.statuses.hasOwnProperty(sk) && en.statuses[sk] > 0 && statNames[sk]){
+            esEl.innerHTML += '<span class="status-tag debuff">'+statNames[sk]+' ('+en.statuses[sk]+')</span>';
+        }
+    }
+
+    /* player resources */
+    document.getElementById("fluffNum").textContent = state.fluff + " / " + state.maxFluff;
+    document.getElementById("fluffBar").style.width = (state.fluff / state.maxFluff * 100) + "%";
+    document.getElementById("skinNum").textContent = state.skin + " / " + state.maxSkin;
+    document.getElementById("skinBar").style.width = (state.skin / state.maxSkin * 100) + "%";
+    document.getElementById("wpNum").textContent = state.wp + " / " + state.maxWp;
+    document.getElementById("wpBar").style.width = (state.wp / state.maxWp * 100) + "%";
+    document.getElementById("panicNum").textContent = state.panic + "%";
+    var pb = document.getElementById("panicBar");
+    var maxP = state.mut.calmHeart ? 80 : 100;
+    pb.style.width = (state.panic / maxP * 100) + "%";
+    pb.className = "res-fill " + (state.panic < 30 ? "panic-low" : state.panic < 70 ? "panic-mid" : "panic-high");
+
+    /* WP display */
+    document.getElementById("wpDisplay").textContent = "WP: " + state.wp + " / " + state.maxWp;
+
+    /* mutations list */
+    var ml = document.getElementById("mutationsList");
+    ml.innerHTML = "";
+    for(var mi = 0; mi < state.mutations.length; mi++){
+        var mdef = ALL_MUTATIONS.filter(function(m){ return m.key === state.mutations[mi]; })[0];
+        if(mdef) ml.innerHTML += '<span class="mutation-tag" title="'+esc(mdef.desc)+'">'+mdef.icon+' '+esc(mdef.name)+'</span>';
+    }
+
+    /* abilities */
+    var abEl = document.getElementById("abilityButtons");
+    abEl.innerHTML = "";
+    var cats = {wool:"🐑 Wool Skills", hoof:"🐏 Hoof & Horn", vocal:"🗣️ Vocal Skills"};
+    var catOrder = ["wool","hoof","vocal"];
+    for(var ci = 0; ci < catOrder.length; ci++){
+        var cat = catOrder[ci];
+        var catDiv = document.createElement("div");
+        catDiv.className = "ability-cat";
+        catDiv.innerHTML = '<div class="ability-cat-label">'+cats[cat]+'</div>';
+
+        for(var ai = 0; ai < ABILITIES.length; ai++){
+            var ab = ABILITIES[ai];
+            if(ab.cat !== cat) continue;
+            var cost = ab.cost;
+            if(state.mut.echoingMemory && ab.cat === "vocal") cost = Math.max(0, cost - 1);
+            if(state.mut.traumaHarness && state.panic >= 100) cost = 0;
+
+            var canUse = state.playerTurn && !state.paralyzed && state.wp >= cost;
+            if(ab.check && !ab.check(state, state.enemy)) canUse = false;
+            if(state.snared && ab.cat === "hoof") canUse = false;
+
+            var btn = document.createElement("button");
+            btn.className = "ability-btn";
+            btn.disabled = !canUse;
+            btn.innerHTML = '<span class="ab-name">'+esc(ab.name)+'</span><span class="ab-cost">'+cost+' WP</span><span class="ab-desc">'+esc(ab.desc)+'</span>';
+            (function(idx){ btn.addEventListener("click", function(){ G.useAbility(idx); }); })(ai);
+            catDiv.appendChild(btn);
+        }
+        abEl.appendChild(catDiv);
+    }
+
+    /* end turn button */
+    document.getElementById("endTurnBtn").disabled = !state.playerTurn || state.paralyzed;
+}
+
+function renderLog(){
+    var el = document.getElementById("logPanel");
+    el.innerHTML = "";
+    var logs = state.log.slice(-20); /* show last 20 entries */
+    for(var i = 0; i < logs.length; i++){
+        el.innerHTML += '<div class="log-entry '+logs[i].cls+'">'+esc(logs[i].msg)+'</div>';
+    }
+    el.scrollTop = el.scrollHeight;
+}
+
+function shakeEnemy(){
+    var el = document.getElementById("enemyArea");
+    el.classList.remove("shake");
+    void el.offsetWidth; /* force reflow */
+    el.classList.add("shake");
+}
+
+/* HTML escaping */
+function esc(s){
+    if(!s) return "";
+    var d = document.createElement("div");
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+}
+
+/* ============================================================
+   PUBLIC API
+   ============================================================ */
+
+window.G = {
+    startRun: function(){
+        state = newState();
+        showStory(0);
+    },
+    enterCombat: function(){
+        startCombat();
+    },
+    useAbility: useAbility,
+    endTurn: endTurn,
+    toTitle: function(){
+        state = null;
+        showScreen("scrTitle");
+    }
+};
+
+})();
+</script>
+</body>
+</html>
