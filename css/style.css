@@ -918,6 +918,64 @@ body {
 }
 
 /* ============================================
+   Member Page
+   ============================================ */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.member-card {
+    padding: 2.5rem 2rem;
+    text-align: center;
+}
+
+.member-avatar {
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+}
+
+.member-card h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+
+.member-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.member-link:hover {
+    text-decoration: underline;
+    text-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+/* ============================================
+   Easter Egg
+   ============================================ */
+.easter-egg {
+    position: fixed;
+    bottom: 14px;
+    left: 14px;
+    width: 10px;
+    height: 10px;
+    opacity: 0.025;
+    z-index: 999;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    cursor: default;
+    display: block;
+}
+
+/* ============================================
    Responsive
    ============================================ */
 @media (max-width: 768px) {

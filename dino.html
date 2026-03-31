@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦕</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f172a;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #f1f5f9;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            padding: 1rem;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            background: rgba(255,255,255,0.03);
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #7dd3fc;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            transition: opacity 0.2s;
+        }
+        .back-link:hover { opacity: 0.7; }
+        .hint {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <a href="index.html" class="back-link">← Back to Home</a>
+        <canvas id="game" width="800" height="260"></canvas>
+        <p class="hint">Space / Click / Tap to jump &middot; ↓ to duck</p>
+    </div>
+
+    <script>
+    (function () {
+        "use strict";
+
+        var canvas = document.getElementById("game");
+        var ctx = canvas.getContext("2d");
+        var W = canvas.width;
+        var H = canvas.height;
+        var GROUND = H - 40;
+        var scale = 1;
+
+        /* ---------- colors ---------- */
+        var COL_BG = "#0f172a";
+        var COL_DINO = "#7dd3fc";
+        var COL_OBS = "#c4b5fd";
+        var COL_CLOUD = "rgba(148,163,184,0.12)";
+        var COL_GROUND = "rgba(255,255,255,0.15)";
+        var COL_TEXT = "#94a3b8";
+        var COL_TEXT_HI = "#f1f5f9";
+
+        /* ---------- state ---------- */
+        var started = false;
+        var over = false;
+        var score = 0;
+        var best = 0;
+        var speed = 6;
+        var frame = 0;
+
+        /* ---------- dino ---------- */
+        var dino = {
+            x: 60, w: 36, h: 44,
+            y: GROUND - 44,
+            vy: 0,
+            ducking: false,
+            duckH: 26,
+            jumpF: -12.5,
+            grav: 0.62
+        };
+
+        /* ---------- obstacles ---------- */
+        var obs = [];
+        var obsTimer = 0;
+        var OBS_GAP_MIN = 70;
+        var OBS_GAP_MAX = 130;
+
+        /* ---------- clouds ---------- */
+        var clouds = [];
+        for (var ci = 0; ci < 4; ci++) {
+            clouds.push({
+                x: Math.random() * W,
+                y: 30 + Math.random() * 60,
+                w: 50 + Math.random() * 40,
+                s: 0.3 + Math.random() * 0.5
+            });
+        }
+
+        /* ---------- ground dots ---------- */
+        var dots = [];
+        for (var di = 0; di < 30; di++) {
+            dots.push({ x: Math.random() * W, w: 1 + Math.random() * 3 });
+        }
+
+        /* =================================
+           INPUT
+        ================================= */
+        function onJump() {
+            if (over) { restart(); return; }
+            if (!started) { started = true; }
+            if (dino.y >= GROUND - getH() - 1) {
+                dino.vy = dino.jumpF;
+            }
+        }
+
+        var duckDown = false;
+        function setDuck(v) { duckDown = v; }
+
+        document.addEventListener("keydown", function (e) {
+            if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); onJump(); }
+            if (e.code === "ArrowDown") { e.preventDefault(); setDuck(true); }
+        });
+        document.addEventListener("keyup", function (e) {
+            if (e.code === "ArrowDown") setDuck(false);
+        });
+        canvas.addEventListener("click", onJump);
+        canvas.addEventListener("touchstart", function (e) { e.preventDefault(); onJump(); }, { passive: false });
+
+        /* =================================
+           HELPERS
+        ================================= */
+        function getH() { return dino.ducking ? dino.duckH : dino.h; }
+
+        function restart() {
+            over = false; started = true;
+            frame = 0; score = 0; speed = 6;
+            obs.length = 0; obsTimer = 0;
+            dino.y = GROUND - dino.h;
+            dino.vy = 0; dino.ducking = false;
+        }
+
+        function spawnObs() {
+            var kind = Math.random();
+            var o;
+            if (kind < 0.65) {
+                /* cactus */
+                var h = 28 + Math.random() * 22;
+                o = { x: W, y: GROUND - h, w: 16 + Math.random() * 10, h: h, type: "c" };
+            } else {
+                /* bird (pterodactyl) */
+                var birdY;
+                var r = Math.random();
+                if (r < 0.4) birdY = GROUND - 26;          /* low */
+                else if (r < 0.75) birdY = GROUND - 52;     /* mid */
+                else birdY = GROUND - 78;                    /* high */
+                o = { x: W, y: birdY, w: 30, h: 20, type: "b", wingT: 0 };
+            }
+            obs.push(o);
+        }
+
+        /* =================================
+           UPDATE
+        ================================= */
+        function update() {
+            if (!started || over) return;
+            frame++;
+            score = Math.floor(frame / 6);
+            speed = 6 + score / 80;
+
+            /* dino physics */
+            dino.ducking = duckDown && dino.y >= GROUND - getH() - 1;
+            var ch = getH();
+            dino.vy += dino.grav;
+            dino.y += dino.vy;
+            if (dino.y >= GROUND - ch) {
+                dino.y = GROUND - ch;
+                dino.vy = 0;
+            }
+
+            /* obstacles */
+            obsTimer++;
+            if (obsTimer > OBS_GAP_MIN + Math.random() * OBS_GAP_MAX) {
+                spawnObs();
+                obsTimer = 0;
+            }
+            for (var i = obs.length - 1; i >= 0; i--) {
+                obs[i].x -= speed;
+                if (obs[i].type === "b") obs[i].wingT += 0.15;
+                if (obs[i].x + obs[i].w < -20) obs.splice(i, 1);
+            }
+
+            /* collision – slightly forgiving hitbox */
+            var pad = 6;
+            var dx = dino.x + pad, dw = dino.w - pad * 2;
+            var dy = dino.y + pad, dh = ch - pad;
+            for (var j = 0; j < obs.length; j++) {
+                var o = obs[j];
+                if (dx < o.x + o.w && dx + dw > o.x && dy < o.y + o.h && dy + dh > o.y) {
+                    over = true;
+                    if (score > best) best = score;
+                    return;
+                }
+            }
+
+            /* clouds */
+            for (var k = 0; k < clouds.length; k++) {
+                clouds[k].x -= clouds[k].s;
+                if (clouds[k].x + clouds[k].w < 0) {
+                    clouds[k].x = W + 10;
+                    clouds[k].y = 30 + Math.random() * 60;
+                }
+            }
+
+            /* ground dots */
+            for (var g = 0; g < dots.length; g++) {
+                dots[g].x -= speed * 0.6;
+                if (dots[g].x < -5) { dots[g].x = W + Math.random() * 20; dots[g].w = 1 + Math.random() * 3; }
+            }
+        }
+
+        /* =================================
+           DRAW
+        ================================= */
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = COL_BG;
+            ctx.fillRect(0, 0, W, H);
+
+            /* clouds */
+            ctx.fillStyle = COL_CLOUD;
+            for (var c = 0; c < clouds.length; c++) {
+                var cl = clouds[c];
+                roundRect(cl.x, cl.y, cl.w, 14, 7);
+            }
+
+            /* ground line */
+            ctx.strokeStyle = COL_GROUND;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND);
+            ctx.lineTo(W, GROUND);
+            ctx.stroke();
+
+            /* ground texture dots */
+            ctx.fillStyle = COL_GROUND;
+            for (var g = 0; g < dots.length; g++) {
+                ctx.fillRect(dots[g].x, GROUND + 4 + (g % 3) * 5, dots[g].w, 1);
+            }
+
+            /* obstacles */
+            for (var i = 0; i < obs.length; i++) {
+                var o = obs[i];
+                if (o.type === "c") {
+                    ctx.fillStyle = COL_OBS;
+                    ctx.fillRect(o.x, o.y, o.w, o.h);
+                    /* cactus arms */
+                    ctx.fillRect(o.x - 4, o.y + o.h * 0.3, 4, 8);
+                    ctx.fillRect(o.x + o.w, o.y + o.h * 0.5, 4, 6);
+                } else {
+                    /* bird body */
+                    ctx.fillStyle = COL_OBS;
+                    ctx.fillRect(o.x, o.y + 6, o.w, 8);
+                    /* beak */
+                    ctx.fillRect(o.x + o.w, o.y + 8, 6, 4);
+                    /* wing flap */
+                    var wingY = Math.sin(o.wingT) * 8;
+                    ctx.fillRect(o.x + 6, o.y + 6 + wingY - 6, 12, 4);
+                }
+            }
+
+            /* dino */
+            var ch = getH();
+            ctx.fillStyle = COL_DINO;
+            /* body */
+            roundRect(dino.x, dino.y, dino.w, ch, 6);
+            /* eye */
+            ctx.fillStyle = COL_BG;
+            if (dino.ducking) {
+                ctx.fillRect(dino.x + dino.w - 10, dino.y + 6, 5, 5);
+            } else {
+                ctx.fillRect(dino.x + dino.w - 10, dino.y + 8, 5, 5);
+            }
+            /* legs */
+            ctx.fillStyle = COL_DINO;
+            if (started && !over) {
+                var legOff = Math.sin(frame * 0.3) > 0;
+                ctx.fillRect(dino.x + 6, dino.y + ch, 6, legOff ? 6 : 3);
+                ctx.fillRect(dino.x + dino.w - 12, dino.y + ch, 6, legOff ? 3 : 6);
+            } else {
+                ctx.fillRect(dino.x + 6, dino.y + ch, 6, 5);
+                ctx.fillRect(dino.x + dino.w - 12, dino.y + ch, 6, 5);
+            }
+
+            /* score */
+            ctx.fillStyle = COL_TEXT;
+            ctx.font = "600 15px Inter, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText("Score: " + score, W - 20, 28);
+            if (best > 0) ctx.fillText("Best: " + best, W - 20, 48);
+
+            /* messages */
+            ctx.textAlign = "center";
+            if (!started) {
+                ctx.fillStyle = COL_TEXT_HI;
+                ctx.font = "600 22px Inter, sans-serif";
+                ctx.fillText("Press Space or Click to Start", W / 2, H / 2 - 10);
+            }
+            if (over) {
+                ctx.fillStyle = COL_TEXT_HI;
+                ctx.font = "600 26px Inter, sans-serif";
+                ctx.fillText("Game Over", W / 2, H / 2 - 20);
+                ctx.fillStyle = COL_TEXT;
+                ctx.font = "400 14px Inter, sans-serif";
+                ctx.fillText("Press Space or Click to Restart", W / 2, H / 2 + 10);
+            }
+        }
+
+        function roundRect(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.fill();
+        }
+
+        /* =================================
+           LOOP
+        ================================= */
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    })();
+    </script>
+</body>
+</html>

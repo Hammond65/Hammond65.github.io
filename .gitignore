@@ -1,6 +1,9 @@
 # PPT source files (contain personal/sensitive content)
 ppt/
 
+# Collected form messages (local only)
+Question/
+
 # OS files
 .DS_Store
 Thumbs.db

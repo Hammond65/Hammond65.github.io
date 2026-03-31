@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog | Hammond</title>
+    <title>Member | Hammond</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,22 +26,28 @@
             </button>
             <ul class="nav-links" id="navLinks">
                 <li><a href="index.html" class="nav-link">Home</a></li>
-                <li><a href="blog.html" class="nav-link active">Blog</a></li>
+                <li><a href="blog.html" class="nav-link">Blog</a></li>
                 <li><a href="projects.html" class="nav-link">Projects</a></li>
-                <li><a href="member.html" class="nav-link">Member</a></li>
+                <li><a href="member.html" class="nav-link active">Member</a></li>
                 <li><a href="contact.html" class="nav-link">Contact</a></li>
             </ul>
         </div>
     </nav>
 
     <section class="page-header">
-        <h1>Blog</h1>
-        <p>Notes and write-ups on deep learning, computer vision, and diffusion models.</p>
+        <h1>Member</h1>
+        <p>People involved in this project.</p>
     </section>
 
     <section class="section" style="padding-top: 0;">
         <div class="container">
-            <div class="posts-grid" id="allPosts"></div>
+            <div class="members-grid">
+                <div class="glass-card member-card fade-in-up">
+                    <div class="member-avatar">👤</div>
+                    <h3>Yihao</h3>
+                    <a href="https://chengyihaohku.github.io" target="_blank" rel="noopener noreferrer" class="member-link">Visit Website →</a>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -57,12 +63,6 @@
     </footer>
 
     <a href="dino.html" class="easter-egg" aria-hidden="true"></a>
-    <script src="js/posts-data.js"></script>
     <script src="js/main.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            loadAllPosts('allPosts');
-        });
-    </script>
 </body>
 </html>

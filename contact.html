@@ -28,6 +28,7 @@
                 <li><a href="index.html" class="nav-link">Home</a></li>
                 <li><a href="blog.html" class="nav-link">Blog</a></li>
                 <li><a href="projects.html" class="nav-link">Projects</a></li>
+                <li><a href="member.html" class="nav-link">Member</a></li>
                 <li><a href="contact.html" class="nav-link active">Contact</a></li>
             </ul>
         </div>
@@ -68,19 +69,20 @@
 
                 <div class="glass-card contact-form-card fade-in-up" style="animation-delay: 0.1s;">
                     <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--color-text);">Send a Message</h3>
-                    <form id="contactForm" onsubmit="handleContactSubmit(event)">
+                    <form id="contactForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
                         <div class="form-group">
                             <label for="name">Name</label>
-                            <input type="text" id="name" name="name" required placeholder="Your name">
+                            <input type="text" id="name" name="name" required placeholder="Your name" maxlength="100">
                         </div>
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required placeholder="your@email.com">
+                            <input type="email" id="email" name="email" required placeholder="your@email.com" maxlength="200">
                         </div>
                         <div class="form-group">
                             <label for="message">Message</label>
-                            <textarea id="message" name="message" required placeholder="Your message..."></textarea>
+                            <textarea id="message" name="message" required placeholder="Your message..." maxlength="5000"></textarea>
                         </div>
+                        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
                         <button type="submit" class="btn btn-primary glow-btn" style="width: 100%; justify-content: center;">Send Message</button>
                         <div id="contactMsg" class="admin-msg"></div>
                     </form>
@@ -100,15 +102,45 @@
         </div>
     </footer>
 
+    <a href="dino.html" class="easter-egg" aria-hidden="true"></a>
     <script src="js/main.js"></script>
     <script>
-        function handleContactSubmit(e) {
-            e.preventDefault();
-            const msg = document.getElementById('contactMsg');
-            msg.className = 'admin-msg success';
-            msg.textContent = 'Thank you! Your message has been noted. Since this is a static site, please reach out via GitHub for a faster response.';
-            e.target.reset();
-        }
+        (function () {
+            var form = document.getElementById("contactForm");
+            var msg = document.getElementById("contactMsg");
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                /* honeypot check */
+                if (form.querySelector("[name='_gotcha']").value) return;
+
+                var data = new FormData(form);
+                var btn = form.querySelector("button[type='submit']");
+                btn.disabled = true;
+                btn.textContent = "Sending\u2026";
+
+                fetch(form.action, {
+                    method: "POST",
+                    body: data,
+                    headers: { "Accept": "application/json" }
+                }).then(function (res) {
+                    if (res.ok) {
+                        msg.className = "admin-msg success";
+                        msg.textContent = "Thank you! Your message has been sent.";
+                        form.reset();
+                    } else {
+                        throw new Error("Form submission failed");
+                    }
+                }).catch(function () {
+                    msg.className = "admin-msg error";
+                    msg.textContent = "Something went wrong. Please try again or reach out via GitHub.";
+                }).finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = "Send Message";
+                });
+            });
+        })();
     </script>
 </body>
 </html>
