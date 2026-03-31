@@ -20,7 +20,7 @@
         #menu{width:100%;max-width:820px;padding:1rem;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
         .menu-title{font-size:1.6rem;font-weight:700;margin-bottom:.4rem;background:linear-gradient(135deg,#7dd3fc,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
         .menu-sub{color:#64748b;font-size:.85rem;margin-bottom:2rem}
-        .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;width:100%;max-width:600px}
+        .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;width:100%;max-width:700px}
         .game-pick{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1.8rem 1rem;text-align:center;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s}
         .game-pick:hover{transform:translateY(-4px);border-color:rgba(125,211,252,.35);box-shadow:0 0 24px rgba(125,211,252,.1)}
         .game-pick .icon{font-size:2.4rem;margin-bottom:.6rem}
@@ -63,6 +63,36 @@
             <div class="icon">🧱</div>
             <div class="label">Tetris</div>
             <div class="desc">Stack &amp; clear</div>
+        </div>
+        <div class="game-pick" onclick="launch('clicker')">
+            <div class="icon">💰</div>
+            <div class="label">Coin Clicker</div>
+            <div class="desc">Click &amp; upgrade</div>
+        </div>
+        <div class="game-pick" onclick="launch('tower')">
+            <div class="icon">🏰</div>
+            <div class="label">Tower Defense</div>
+            <div class="desc">Place &amp; defend</div>
+        </div>
+        <div class="game-pick" onclick="launch('ttt')">
+            <div class="icon">❌</div>
+            <div class="label">Tic Tac Toe</div>
+            <div class="desc">Beat the AI</div>
+        </div>
+        <div class="game-pick" onclick="launch('pacman')">
+            <div class="icon">👾</div>
+            <div class="label">Pac-Man</div>
+            <div class="desc">Eat all dots</div>
+        </div>
+        <div class="game-pick" onclick="launch('checkers')">
+            <div class="icon">🔴</div>
+            <div class="label">Checkers</div>
+            <div class="desc">Jump &amp; king</div>
+        </div>
+        <div class="game-pick" onclick="launch('chess')">
+            <div class="icon">♟️</div>
+            <div class="label">Chess</div>
+            <div class="desc">Checkmate the AI</div>
         </div>
     </div>
 </div>
@@ -115,6 +145,12 @@ window.launch = function(name){
     if(name==="snake") initSnake();
     if(name==="pong")  initPong();
     if(name==="tetris"){cv.style.maxWidth="320px";initTetris();}
+    if(name==="clicker"){cv.style.maxWidth="480px";initClicker();}
+    if(name==="tower") initTower();
+    if(name==="ttt"){cv.style.maxWidth="420px";initTTT();}
+    if(name==="pacman") initPacman();
+    if(name==="checkers"){cv.style.maxWidth="480px";initCheckers();}
+    if(name==="chess"){cv.style.maxWidth="480px";initChess();}
 };
 
 window.showMenu = function(){
@@ -134,6 +170,18 @@ window.showMenu = function(){
     cv.removeEventListener("touchstart",snakeTap);
     cv.removeEventListener("click",tetrisTap);
     cv.removeEventListener("touchstart",tetrisTap);
+    cv.removeEventListener("click",clickerTap);
+    cv.removeEventListener("touchstart",clickerTap);
+    cv.removeEventListener("click",towerTap);
+    cv.removeEventListener("touchstart",towerTap);
+    cv.removeEventListener("click",tttTap);
+    cv.removeEventListener("touchstart",tttTap);
+    cv.removeEventListener("click",pacmanTap);
+    cv.removeEventListener("touchstart",pacmanTap);
+    cv.removeEventListener("click",checkersTap);
+    cv.removeEventListener("touchstart",checkersTap);
+    cv.removeEventListener("click",chessTap);
+    cv.removeEventListener("touchstart",chessTap);
 };
 
 /* ============================================================
@@ -460,6 +508,816 @@ function drwTetris(){
     ctx.textAlign="center";
     if(!tStarted){ctx.fillStyle=TH;ctx.font="600 18px Inter,sans-serif";ctx.fillText("Click to Start",W/2,H/2);}
     if(tOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-40,W,70);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText("Game Over",W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to Restart",W/2,H/2+16);}
+}
+
+/* ============================================================
+   5. COIN CLICKER (Incremental)
+   ============================================================ */
+var ck={coins:0,cps:0,clickPow:1,upgrades:[]};
+var ckStarted=false;
+
+function initClicker(){
+    cv.width=480;cv.height=500;
+    hintEl.textContent="Click the coin to earn \u00b7 Buy upgrades on the right";
+    ck={coins:0,cps:0,clickPow:1,upgrades:[
+        {name:"Auto Clicker",desc:"+1 coin/sec",cost:10,baseCost:10,owned:0,cps:1,pow:0},
+        {name:"Double Click",desc:"+1 click power",cost:25,baseCost:25,owned:0,cps:0,pow:1},
+        {name:"Gold Mine",desc:"+5 coins/sec",cost:100,baseCost:100,owned:0,cps:5,pow:0},
+        {name:"Diamond Drill",desc:"+20 coins/sec",cost:500,baseCost:500,owned:0,cps:20,pow:0},
+        {name:"Magic Wand",desc:"+5 click power",cost:250,baseCost:250,owned:0,cps:0,pow:5},
+        {name:"Robot Army",desc:"+100 coins/sec",cost:2500,baseCost:2500,owned:0,cps:100,pow:0}
+    ]};
+    ckStarted=true;
+    cv.addEventListener("click",clickerTap);
+    cv.addEventListener("touchstart",clickerTap,{passive:false});
+    var lastT=performance.now();
+    function run(){
+        loopId=requestAnimationFrame(run);
+        var now=performance.now(),dt=(now-lastT)/1000;lastT=now;
+        ck.coins+=ck.cps*dt;
+        drwClicker();
+    }
+    run();
+}
+function clickerTap(e){
+    if(e.type==="touchstart")e.preventDefault();
+    var rect=cv.getBoundingClientRect();
+    var sx=rect.width/cv.width,sy=rect.height/cv.height;
+    var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
+    var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
+    /* coin click area */
+    if(mx<220){ck.coins+=ck.clickPow;return;}
+    /* upgrade buttons */
+    for(var i=0;i<ck.upgrades.length;i++){
+        var u=ck.upgrades[i];
+        var uy=60+i*62;
+        if(mx>=240&&mx<=470&&my>=uy&&my<=uy+54&&ck.coins>=u.cost){
+            ck.coins-=u.cost;u.owned++;
+            ck.cps+=u.cps;ck.clickPow+=u.pow;
+            u.cost=Math.floor(u.baseCost*Math.pow(1.4,u.owned));
+        }
+    }
+}
+function fmtNum(n){if(n>=1e9)return(n/1e9).toFixed(1)+"B";if(n>=1e6)return(n/1e6).toFixed(1)+"M";if(n>=1e3)return(n/1e3).toFixed(1)+"K";return Math.floor(n).toString();}
+function drwClicker(){
+    var W=cv.width,H=cv.height;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    /* left side — coin */
+    ctx.fillStyle=TH;ctx.font="700 18px Inter,sans-serif";ctx.textAlign="center";
+    ctx.fillText(fmtNum(ck.coins)+" coins",110,32);
+    ctx.font="400 12px Inter,sans-serif";ctx.fillStyle=TXT;
+    ctx.fillText(fmtNum(ck.cps)+" /sec \u00b7 +"+fmtNum(ck.clickPow)+" /click",110,50);
+    /* coin circle */
+    var pulse=1+Math.sin(performance.now()*0.003)*0.04;
+    ctx.fillStyle="#fbbf24";ctx.beginPath();ctx.arc(110,180,60*pulse,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#f59e0b";ctx.beginPath();ctx.arc(110,180,48*pulse,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#fbbf24";ctx.font="700 36px Inter,sans-serif";ctx.textAlign="center";
+    ctx.fillText("$",110,194);
+    ctx.fillStyle=TXT;ctx.font="400 11px Inter,sans-serif";ctx.fillText("Click the coin!",110,270);
+    /* divider */
+    ctx.fillStyle="rgba(255,255,255,.06)";ctx.fillRect(228,20,2,H-40);
+    /* right side — upgrades */
+    ctx.fillStyle=TH;ctx.font="600 14px Inter,sans-serif";ctx.textAlign="left";
+    ctx.fillText("Upgrades",250,40);
+    for(var i=0;i<ck.upgrades.length;i++){
+        var u=ck.upgrades[i];var uy=60+i*62;
+        var canBuy=ck.coins>=u.cost;
+        ctx.fillStyle=canBuy?"rgba(125,211,252,.12)":"rgba(255,255,255,.04)";
+        rr(240,uy,230,54,8);
+        ctx.fillStyle=canBuy?TH:TXT;ctx.font="600 12px Inter,sans-serif";ctx.textAlign="left";
+        ctx.fillText(u.name+(u.owned>0?" ("+u.owned+")":""),252,uy+20);
+        ctx.fillStyle=TXT;ctx.font="400 10px Inter,sans-serif";
+        ctx.fillText(u.desc,252,uy+34);
+        ctx.fillStyle=canBuy?"#34d399":"#64748b";ctx.font="600 11px Inter,sans-serif";ctx.textAlign="right";
+        ctx.fillText(fmtNum(u.cost),462,uy+28);
+        ctx.textAlign="left";
+    }
+}
+
+/* ============================================================
+   6. TOWER DEFENSE
+   ============================================================ */
+var TD_COLS=16,TD_ROWS=10,tdCW,tdCH,tdMap,tdPath,tdTowers,tdEnemies,tdBullets;
+var tdWave,tdHP,tdMoney,tdOver,tdStarted,tdSpawnT,tdSpawnI,tdEPerWave,tdSpawned;
+var tdSelected=-1;
+
+/* path coords (column indices for a zigzag) */
+var tdPathDef=[[0,4],[3,4],[3,2],[7,2],[7,7],[11,7],[11,3],[15,3]];
+
+function initTower(){
+    cv.width=640;cv.height=400;
+    tdCW=cv.width/TD_COLS;tdCH=cv.height/TD_ROWS;
+    hintEl.textContent="Click to place towers ($20) \u00b7 Enemies follow the path";
+    tdMap=[];for(var r=0;r<TD_ROWS;r++){tdMap[r]=[];for(var c=0;c<TD_COLS;c++)tdMap[r][c]=0;}
+    /* build path on map */
+    tdPath=[];
+    for(var s=0;s<tdPathDef.length-1;s++){
+        var ax=tdPathDef[s][0],ay=tdPathDef[s][1],bx=tdPathDef[s+1][0],by=tdPathDef[s+1][1];
+        if(ax===bx){var dy=by>ay?1:-1;for(var y=ay;y!==by+dy;y+=dy){if(!hasPathPt(ax,y)){tdPath.push({x:ax,y:y});tdMap[y][ax]=1;}}}
+        else{var dx=bx>ax?1:-1;for(var x=ax;x!==bx+dx;x+=dx){if(!hasPathPt(x,ay)){tdPath.push({x:x,y:ay});tdMap[ay][x]=1;}}}
+    }
+    tdTowers=[];tdEnemies=[];tdBullets=[];
+    tdWave=1;tdHP=20;tdMoney=60;tdOver=false;tdStarted=false;
+    tdSpawnT=0;tdSpawnI=40;tdEPerWave=5;tdSpawned=0;
+    cv.addEventListener("click",towerTap);
+    cv.addEventListener("touchstart",towerTap,{passive:false});
+    function run(){loopId=requestAnimationFrame(run);updTower();drwTower();}
+    run();
+}
+function hasPathPt(x,y){for(var i=0;i<tdPath.length;i++)if(tdPath[i].x===x&&tdPath[i].y===y)return true;return false;}
+function towerTap(e){
+    if(e.type==="touchstart")e.preventDefault();
+    if(tdOver){initTower();return;}
+    if(!tdStarted){tdStarted=true;return;}
+    var rect=cv.getBoundingClientRect();
+    var sx=rect.width/cv.width,sy=rect.height/cv.height;
+    var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
+    var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
+    var gc=Math.floor(mx/tdCW),gr=Math.floor(my/tdCH);
+    if(gc<0||gc>=TD_COLS||gr<0||gr>=TD_ROWS)return;
+    if(tdMap[gr][gc]!==0)return;
+    if(tdMoney<20)return;
+    tdMoney-=20;tdMap[gr][gc]=2;
+    tdTowers.push({x:gc,y:gr,range:2.8,rate:30,cooldown:0,dmg:1});
+}
+function updTower(){
+    if(!tdStarted||tdOver)return;
+    /* spawn enemies */
+    tdSpawnT++;
+    if(tdSpawned<tdEPerWave&&tdSpawnT>=tdSpawnI){
+        tdSpawnT=0;tdSpawned++;
+        var hp=3+tdWave*2;
+        tdEnemies.push({pi:0,x:tdPath[0].x,y:tdPath[0].y,hp:hp,maxHp:hp,spd:0.02+Math.min(tdWave*0.003,0.04)});
+    }
+    /* check wave done */
+    if(tdSpawned>=tdEPerWave&&tdEnemies.length===0){
+        tdWave++;tdEPerWave=5+tdWave*2;tdSpawned=0;tdSpawnI=Math.max(15,40-tdWave*2);
+        tdMoney+=10+tdWave*5;
+    }
+    /* move enemies */
+    for(var i=tdEnemies.length-1;i>=0;i--){
+        var en=tdEnemies[i];
+        var target=tdPath[Math.min(en.pi+1,tdPath.length-1)];
+        var dx=target.x-en.x,dy=target.y-en.y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<en.spd){en.x=target.x;en.y=target.y;en.pi++;
+            if(en.pi>=tdPath.length-1){tdHP--;tdEnemies.splice(i,1);if(tdHP<=0){tdOver=true;}continue;}
+        }else{en.x+=dx/dist*en.spd;en.y+=dy/dist*en.spd;}
+    }
+    /* tower shooting */
+    for(var t=0;t<tdTowers.length;t++){
+        var tw=tdTowers[t];
+        if(tw.cooldown>0){tw.cooldown--;continue;}
+        var closest=null,bd=Infinity;
+        for(var j=0;j<tdEnemies.length;j++){
+            var ex=tdEnemies[j].x-tw.x,ey=tdEnemies[j].y-tw.y;
+            var d2=Math.sqrt(ex*ex+ey*ey);
+            if(d2<tw.range&&d2<bd){bd=d2;closest=tdEnemies[j];}
+        }
+        if(closest){tw.cooldown=tw.rate;tdBullets.push({x:tw.x,y:tw.y,tx:closest,spd:0.15,dmg:tw.dmg});}
+    }
+    /* move bullets */
+    for(var b=tdBullets.length-1;b>=0;b--){
+        var bl=tdBullets[b];
+        if(!bl.tx||bl.tx.hp<=0){tdBullets.splice(b,1);continue;}
+        var bx=bl.tx.x-bl.x,by=bl.tx.y-bl.y;
+        var bd2=Math.sqrt(bx*bx+by*by);
+        if(bd2<0.2){bl.tx.hp-=bl.dmg;if(bl.tx.hp<=0){tdMoney+=2;for(var ri=tdEnemies.length-1;ri>=0;ri--)if(tdEnemies[ri]===bl.tx){tdEnemies.splice(ri,1);break;}}tdBullets.splice(b,1);}
+        else{bl.x+=bx/bd2*bl.spd;bl.y+=by/bd2*bl.spd;}
+    }
+}
+function drwTower(){
+    var W=cv.width,H=cv.height;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    /* grid */
+    ctx.strokeStyle="rgba(255,255,255,.03)";ctx.lineWidth=1;
+    for(var x=0;x<=TD_COLS;x++){ctx.beginPath();ctx.moveTo(x*tdCW,0);ctx.lineTo(x*tdCW,H);ctx.stroke();}
+    for(var y=0;y<=TD_ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*tdCH);ctx.lineTo(W,y*tdCH);ctx.stroke();}
+    /* path */
+    ctx.fillStyle="rgba(255,255,255,.06)";
+    for(var p=0;p<tdPath.length;p++) ctx.fillRect(tdPath[p].x*tdCW,tdPath[p].y*tdCH,tdCW,tdCH);
+    /* towers */
+    for(var t=0;t<tdTowers.length;t++){
+        var tw=tdTowers[t];
+        ctx.fillStyle=C2;rr(tw.x*tdCW+4,tw.y*tdCH+4,tdCW-8,tdCH-8,6);
+        ctx.fillStyle=BG;ctx.font="600 14px Inter,sans-serif";ctx.textAlign="center";
+        ctx.fillText("\u25b2",tw.x*tdCW+tdCW/2,tw.y*tdCH+tdCH/2+5);
+    }
+    /* enemies */
+    for(var i=0;i<tdEnemies.length;i++){
+        var en=tdEnemies[i];
+        var ex=en.x*tdCW+tdCW/2,ey=en.y*tdCH+tdCH/2;
+        ctx.fillStyle="#f87171";ctx.beginPath();ctx.arc(ex,ey,10,0,Math.PI*2);ctx.fill();
+        /* hp bar */
+        var bw=20,bh=3;ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(ex-bw/2,ey-16,bw,bh);
+        ctx.fillStyle="#34d399";ctx.fillRect(ex-bw/2,ey-16,bw*(en.hp/en.maxHp),bh);
+    }
+    /* bullets */
+    ctx.fillStyle=C1;
+    for(var b=0;b<tdBullets.length;b++){
+        var bl=tdBullets[b];
+        ctx.beginPath();ctx.arc(bl.x*tdCW+tdCW/2,bl.y*tdCH+tdCH/2,3,0,Math.PI*2);ctx.fill();
+    }
+    /* HUD */
+    ctx.fillStyle="rgba(15,23,42,.7)";rr(4,4,200,52,8);
+    ctx.fillStyle=TH;ctx.font="600 12px Inter,sans-serif";ctx.textAlign="left";
+    ctx.fillText("Wave: "+tdWave+"  HP: "+tdHP+"  $"+tdMoney,14,26);
+    ctx.fillStyle=TXT;ctx.font="400 10px Inter,sans-serif";
+    ctx.fillText("Click empty cell to place tower ($20)",14,42);
+    if(!tdStarted){ctx.fillStyle=TH;ctx.font="600 20px Inter,sans-serif";ctx.textAlign="center";ctx.fillText("Click to Start",W/2,H/2);}
+    if(tdOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-40,W,70);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.textAlign="center";ctx.fillText("Game Over \u2014 Wave "+tdWave,W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to Restart",W/2,H/2+16);}
+}
+
+/* ============================================================
+   7. TIC TAC TOE vs AI
+   ============================================================ */
+var ttBoard,ttTurn,ttWinner,ttWinLine;
+
+function initTTT(){
+    cv.width=420;cv.height=420;
+    hintEl.textContent="You are X \u00b7 Click a cell to play";
+    ttBoard=[0,0,0,0,0,0,0,0,0];ttTurn=1;ttWinner=0;ttWinLine=null;
+    cv.addEventListener("click",tttTap);
+    cv.addEventListener("touchstart",tttTap,{passive:false});
+    function run(){loopId=requestAnimationFrame(run);drwTTT();}
+    run();
+}
+function tttTap(e){
+    if(e.type==="touchstart")e.preventDefault();
+    if(ttWinner!==0){ttBoard=[0,0,0,0,0,0,0,0,0];ttTurn=1;ttWinner=0;ttWinLine=null;return;}
+    if(ttTurn!==1)return;
+    var rect=cv.getBoundingClientRect();
+    var sx=rect.width/cv.width,sy=rect.height/cv.height;
+    var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
+    var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
+    var pad=30,cellW=(cv.width-pad*2)/3;
+    var col=Math.floor((mx-pad)/cellW),row=Math.floor((my-pad)/cellW);
+    if(col<0||col>2||row<0||row>2)return;
+    var idx=row*3+col;
+    if(ttBoard[idx]!==0)return;
+    ttBoard[idx]=1;
+    ttWinner=checkTTTWin();
+    if(ttWinner===0&&ttBoard.indexOf(0)!==-1){ttTurn=2;setTimeout(tttAI,200);}
+}
+function tttAI(){
+    if(ttWinner!==0||currentGame!=="ttt")return;
+    /* try to win */
+    var mv=tttFindMove(2);
+    /* try to block */
+    if(mv===-1)mv=tttFindMove(1);
+    /* take center */
+    if(mv===-1&&ttBoard[4]===0)mv=4;
+    /* take corner */
+    if(mv===-1){var corners=[0,2,6,8];corners.sort(function(){return Math.random()-.5;});for(var i=0;i<4;i++)if(ttBoard[corners[i]]===0){mv=corners[i];break;}}
+    /* any */
+    if(mv===-1){for(var j=0;j<9;j++)if(ttBoard[j]===0){mv=j;break;}}
+    if(mv!==-1)ttBoard[mv]=2;
+    ttWinner=checkTTTWin();
+    ttTurn=1;
+}
+function tttFindMove(p){
+    var lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for(var i=0;i<lines.length;i++){
+        var a=lines[i][0],b=lines[i][1],c=lines[i][2];
+        var vals=[ttBoard[a],ttBoard[b],ttBoard[c]];
+        var cnt=0,empty=-1;
+        for(var j=0;j<3;j++){if(vals[j]===p)cnt++;if(vals[j]===0)empty=lines[i][j];}
+        if(cnt===2&&empty!==-1)return empty;
+    }
+    return -1;
+}
+function checkTTTWin(){
+    var lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for(var i=0;i<lines.length;i++){
+        var a=lines[i][0],b=lines[i][1],c=lines[i][2];
+        if(ttBoard[a]!==0&&ttBoard[a]===ttBoard[b]&&ttBoard[b]===ttBoard[c]){ttWinLine=lines[i];return ttBoard[a];}
+    }
+    if(ttBoard.indexOf(0)===-1)return 3;/* draw */
+    return 0;
+}
+function drwTTT(){
+    var W=cv.width,H=cv.height,pad=30,cellW=(W-pad*2)/3;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    /* grid lines */
+    ctx.strokeStyle="rgba(255,255,255,.12)";ctx.lineWidth=3;
+    for(var i=1;i<3;i++){
+        ctx.beginPath();ctx.moveTo(pad+i*cellW,pad);ctx.lineTo(pad+i*cellW,H-pad);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(pad,pad+i*cellW);ctx.lineTo(W-pad,pad+i*cellW);ctx.stroke();
+    }
+    /* pieces */
+    for(var r=0;r<3;r++)for(var c=0;c<3;c++){
+        var v=ttBoard[r*3+c];if(v===0)continue;
+        var cx=pad+c*cellW+cellW/2,cy=pad+r*cellW+cellW/2;
+        if(v===1){/* X */
+            ctx.strokeStyle=C1;ctx.lineWidth=5;ctx.lineCap="round";
+            var s=cellW*0.28;
+            ctx.beginPath();ctx.moveTo(cx-s,cy-s);ctx.lineTo(cx+s,cy+s);ctx.stroke();
+            ctx.beginPath();ctx.moveTo(cx+s,cy-s);ctx.lineTo(cx-s,cy+s);ctx.stroke();
+        }else{/* O */
+            ctx.strokeStyle=C2;ctx.lineWidth=5;
+            ctx.beginPath();ctx.arc(cx,cy,cellW*0.28,0,Math.PI*2);ctx.stroke();
+        }
+    }
+    /* win line */
+    if(ttWinLine){
+        ctx.strokeStyle="#34d399";ctx.lineWidth=6;ctx.lineCap="round";
+        var a=ttWinLine[0],b=ttWinLine[2];
+        var ax=pad+(a%3)*cellW+cellW/2,ay=pad+Math.floor(a/3)*cellW+cellW/2;
+        var bx=pad+(b%3)*cellW+cellW/2,by=pad+Math.floor(b/3)*cellW+cellW/2;
+        ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+    }
+    /* message */
+    ctx.textAlign="center";
+    if(ttWinner===1){ctx.fillStyle="#34d399";ctx.font="600 22px Inter,sans-serif";ctx.fillText("You Win!",W/2,H-8);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H+8);}
+    else if(ttWinner===2){ctx.fillStyle="#f87171";ctx.font="600 22px Inter,sans-serif";ctx.fillText("AI Wins!",W/2,H-8);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H+8);}
+    else if(ttWinner===3){ctx.fillStyle=TXT;ctx.font="600 22px Inter,sans-serif";ctx.fillText("Draw!",W/2,H-8);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H+8);}
+}
+
+/* ============================================================
+   8. PAC-MAN
+   ============================================================ */
+var PM_COLS=21,PM_ROWS=21,pmCW,pmCH,pmMap,pmPlayer,pmGhosts,pmDots,pmScore,pmBest=0,pmOver,pmStarted,pmTick,pmDir,pmNextDir,pmPower,pmPowerT;
+var pmLevelMap=[
+    "#####################",
+    "#.........#.........#",
+    "#.###.###.#.###.###.#",
+    "#.###.###.#.###.###.#",
+    "#...................#",
+    "#.###.#.#####.#.###.#",
+    "#.....#...#...#.....#",
+    "#####.### # ###.#####",
+    "    #.#       #.#    ",
+    "#####.# ## ## #.#####",
+    "     .  #   #  .     ",
+    "#####.# ##### #.#####",
+    "    #.#       #.#    ",
+    "#####.# ##### #.#####",
+    "#.........#.........#",
+    "#.###.###.#.###.###.#",
+    "#...#.............#.#",
+    "##.##.#.#####.#.##.##",
+    "#.....#...#...#.....#",
+    "#.#######.#.#######.#",
+    "#####################"
+];
+
+function initPacman(){
+    cv.width=504;cv.height=504;
+    pmCW=cv.width/PM_COLS;pmCH=cv.height/PM_ROWS;
+    hintEl.textContent="Arrow keys to move \u00b7 Eat all dots to win";
+    pmMap=[];pmDots=0;pmScore=0;pmOver=false;pmStarted=false;pmTick=0;
+    pmDir={x:0,y:0};pmNextDir={x:1,y:0};pmPower=false;pmPowerT=0;
+    for(var r=0;r<PM_ROWS;r++){pmMap[r]=[];for(var c=0;c<PM_COLS;c++){
+        var ch=pmLevelMap[r][c];
+        pmMap[r][c]=ch==="#"?1:ch==="."?2:0;
+        if(ch===".")pmDots++;
+    }}
+    /* power pellets */
+    pmMap[1][1]=3;pmMap[1][PM_COLS-2]=3;pmMap[PM_ROWS-2][1]=3;pmMap[PM_ROWS-2][PM_COLS-2]=3;
+    pmPlayer={x:10,y:10,nx:10,ny:10};
+    pmGhosts=[
+        {x:9,y:8,nx:9,ny:8,dir:{x:-1,y:0},color:"#f87171",scared:false},
+        {x:10,y:8,nx:10,ny:8,dir:{x:0,y:-1},color:"#f0abfc",scared:false},
+        {x:11,y:8,nx:11,ny:8,dir:{x:1,y:0},color:"#fbbf24",scared:false},
+        {x:10,y:9,nx:10,ny:9,dir:{x:0,y:1},color:"#34d399",scared:false}
+    ];
+    cv.addEventListener("click",pacmanTap);
+    cv.addEventListener("touchstart",pacmanTap,{passive:false});
+    function run(){loopId=requestAnimationFrame(run);updPacman();drwPacman();}
+    run();
+}
+function pacmanTap(e){if(e.type==="touchstart")e.preventDefault();if(pmOver){initPacman();return;}if(!pmStarted)pmStarted=true;}
+/* pacman keys */
+document.addEventListener("keydown",function(e){
+    if(currentGame!=="pacman")return;
+    if(e.code==="ArrowUp"||e.code==="KeyW")pmNextDir={x:0,y:-1};
+    if(e.code==="ArrowDown"||e.code==="KeyS")pmNextDir={x:0,y:1};
+    if(e.code==="ArrowLeft"||e.code==="KeyA")pmNextDir={x:-1,y:0};
+    if(e.code==="ArrowRight"||e.code==="KeyD")pmNextDir={x:1,y:0};
+    if(!pmStarted)pmStarted=true;
+    e.preventDefault();
+});
+function pmWalkable(x,y){if(x<0||x>=PM_COLS||y<0||y>=PM_ROWS)return true;/*wrap*/return pmMap[y][x]!==1;}
+function pmWrap(v,max){if(v<0)return max-1;if(v>=max)return 0;return v;}
+function updPacman(){
+    if(!pmStarted||pmOver)return;
+    pmTick++;if(pmTick<8)return;pmTick=0;
+    /* try next dir */
+    var tx=pmWrap(pmPlayer.x+pmNextDir.x,PM_COLS),ty=pmWrap(pmPlayer.y+pmNextDir.y,PM_ROWS);
+    if(pmWalkable(tx,ty)){pmDir=pmNextDir;}
+    var nx=pmWrap(pmPlayer.x+pmDir.x,PM_COLS),ny=pmWrap(pmPlayer.y+pmDir.y,PM_ROWS);
+    if(pmWalkable(nx,ny)){pmPlayer.x=nx;pmPlayer.y=ny;}
+    /* eat dot */
+    if(pmMap[pmPlayer.y]&&pmMap[pmPlayer.y][pmPlayer.x]>=2){
+        if(pmMap[pmPlayer.y][pmPlayer.x]===3){pmPower=true;pmPowerT=60;for(var g=0;g<pmGhosts.length;g++)pmGhosts[g].scared=true;}
+        pmMap[pmPlayer.y][pmPlayer.x]=0;pmScore+=10;pmDots--;
+    }
+    if(pmDots<=0){pmOver=true;if(pmScore>pmBest)pmBest=pmScore;return;}
+    /* power timer */
+    if(pmPower){pmPowerT--;if(pmPowerT<=0){pmPower=false;for(var g2=0;g2<pmGhosts.length;g2++)pmGhosts[g2].scared=false;}}
+    /* move ghosts */
+    for(var i=0;i<pmGhosts.length;i++){
+        var gh=pmGhosts[i];
+        var dirs=[{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+        var best=null,bestD=gh.scared?-1:Infinity;
+        for(var d=0;d<dirs.length;d++){
+            /* no reversing */
+            if(dirs[d].x===-gh.dir.x&&dirs[d].y===-gh.dir.y)continue;
+            var gx=pmWrap(gh.x+dirs[d].x,PM_COLS),gy=pmWrap(gh.y+dirs[d].y,PM_ROWS);
+            if(!pmWalkable(gx,gy))continue;
+            var dist=Math.abs(gx-pmPlayer.x)+Math.abs(gy-pmPlayer.y);
+            if(gh.scared){if(dist>bestD){bestD=dist;best=dirs[d];}}
+            else{if(dist<bestD){bestD=dist;best=dirs[d];}}
+        }
+        if(!best)best={x:-gh.dir.x,y:-gh.dir.y};
+        gh.dir=best;
+        gh.x=pmWrap(gh.x+best.x,PM_COLS);gh.y=pmWrap(gh.y+best.y,PM_ROWS);
+        /* collision with player */
+        if(gh.x===pmPlayer.x&&gh.y===pmPlayer.y){
+            if(gh.scared){gh.x=10;gh.y=8;gh.scared=false;pmScore+=50;}
+            else{pmOver=true;if(pmScore>pmBest)pmBest=pmScore;return;}
+        }
+    }
+}
+function drwPacman(){
+    var W=cv.width,H=cv.height;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    /* walls & dots */
+    for(var r=0;r<PM_ROWS;r++)for(var c=0;c<PM_COLS;c++){
+        var v=pmMap[r][c];
+        if(v===1){ctx.fillStyle="rgba(100,116,139,.25)";ctx.fillRect(c*pmCW,r*pmCH,pmCW,pmCH);}
+        if(v===2){ctx.fillStyle="rgba(255,255,255,.4)";ctx.beginPath();ctx.arc(c*pmCW+pmCW/2,r*pmCH+pmCH/2,3,0,Math.PI*2);ctx.fill();}
+        if(v===3){ctx.fillStyle="#fbbf24";ctx.beginPath();ctx.arc(c*pmCW+pmCW/2,r*pmCH+pmCH/2,6,0,Math.PI*2);ctx.fill();}
+    }
+    /* pacman */
+    var px=pmPlayer.x*pmCW+pmCW/2,py=pmPlayer.y*pmCH+pmCH/2;
+    var mouthAngle=Math.abs(Math.sin(performance.now()*0.01))*0.4;
+    var angle=Math.atan2(pmDir.y,pmDir.x);
+    ctx.fillStyle="#fbbf24";ctx.beginPath();
+    ctx.arc(px,py,10,angle+mouthAngle,angle+Math.PI*2-mouthAngle);ctx.lineTo(px,py);ctx.fill();
+    /* ghosts */
+    for(var i=0;i<pmGhosts.length;i++){
+        var gh=pmGhosts[i];
+        var gx=gh.x*pmCW+pmCW/2,gy=gh.y*pmCH+pmCH/2;
+        ctx.fillStyle=gh.scared?"#60a5fa":gh.color;
+        ctx.beginPath();ctx.arc(gx,gy-2,10,Math.PI,0);ctx.lineTo(gx+10,gy+8);
+        for(var w=0;w<4;w++){var wx=gx+10-w*5;ctx.lineTo(wx-2.5,gy+4);ctx.lineTo(wx-5,gy+8);}
+        ctx.fill();
+        ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(gx-4,gy-3,3,0,Math.PI*2);ctx.arc(gx+4,gy-3,3,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=gh.scared?"#fff":"#222";ctx.beginPath();ctx.arc(gx-4+gh.dir.x,gy-3+gh.dir.y,1.5,0,Math.PI*2);ctx.arc(gx+4+gh.dir.x,gy-3+gh.dir.y,1.5,0,Math.PI*2);ctx.fill();
+    }
+    /* HUD */
+    ctx.fillStyle=TXT;ctx.font="600 13px Inter,sans-serif";ctx.textAlign="right";
+    ctx.fillText("Score: "+pmScore,W-10,16);if(pmBest>0)ctx.fillText("Best: "+pmBest,W-10,32);
+    ctx.textAlign="center";
+    if(!pmStarted){ctx.fillStyle=TH;ctx.font="600 20px Inter,sans-serif";ctx.fillText("Arrow Keys to Move \u00b7 Click to Start",W/2,H/2);}
+    if(pmOver&&pmDots<=0){ctx.fillStyle="#34d399";ctx.font="600 26px Inter,sans-serif";ctx.fillText("You Win!",W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+14);}
+    else if(pmOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-34,W,60);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText("Game Over",W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to Restart",W/2,H/2+14);}
+}
+
+/* ============================================================
+   9. CHECKERS (vs AI)
+   ============================================================ */
+var CK_SZ=8,ckCW,ckBoard,ckTurn,ckSelected,ckMoves,ckOver,ckMsg;
+
+function initCheckers(){
+    cv.width=480;cv.height=480;
+    ckCW=cv.width/CK_SZ;
+    hintEl.textContent="Click your piece, then click where to move \u00b7 You are red (bottom)";
+    ckBoard=[];ckTurn=1;ckSelected=null;ckMoves=[];ckOver=false;ckMsg="";
+    for(var r=0;r<CK_SZ;r++){ckBoard[r]=[];for(var c=0;c<CK_SZ;c++){
+        ckBoard[r][c]=0;
+        if((r+c)%2===1){
+            if(r<3)ckBoard[r][c]=2;/* AI black */
+            if(r>4)ckBoard[r][c]=1;/* player red */
+        }
+    }}
+    cv.addEventListener("click",checkersTap);
+    cv.addEventListener("touchstart",checkersTap,{passive:false});
+    function run(){loopId=requestAnimationFrame(run);drwCheckers();}
+    run();
+}
+function checkersTap(e){
+    if(e.type==="touchstart")e.preventDefault();
+    if(ckOver){initCheckers();return;}
+    if(ckTurn!==1)return;
+    var rect=cv.getBoundingClientRect();
+    var sx=rect.width/cv.width,sy=rect.height/cv.height;
+    var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
+    var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
+    var col=Math.floor(mx/ckCW),row=Math.floor(my/ckCW);
+    if(col<0||col>=CK_SZ||row<0||row>=CK_SZ)return;
+    /* if we have a selected piece, try to move */
+    if(ckSelected){
+        for(var i=0;i<ckMoves.length;i++){
+            if(ckMoves[i].tr===row&&ckMoves[i].tc===col){
+                ckDoMove(ckMoves[i]);
+                ckSelected=null;ckMoves=[];
+                /* check for multi-jump */
+                /* switch turn */
+                ckTurn=2;
+                ckCheckWin();
+                if(!ckOver)setTimeout(ckAI,300);
+                return;
+            }
+        }
+        ckSelected=null;ckMoves=[];
+    }
+    /* select a piece */
+    var v=ckBoard[row][col];
+    if(v===1||v===3){/* player piece */
+        ckSelected={r:row,c:col};
+        ckMoves=ckGetMoves(row,col,v);
+        /* if there are jumps available for any piece, must jump */
+        var allJumps=ckAllJumps(1);
+        if(allJumps.length>0)ckMoves=ckMoves.filter(function(m){return m.jump;});
+    }
+}
+function ckGetMoves(r,c,v){
+    var moves=[],dirs=[];
+    var isKing=v===3||v===4;
+    if(v===1||isKing)dirs.push([-1,-1],[-1,1]);/* red moves up */
+    if(v===2||isKing)dirs.push([1,-1],[1,1]);/* black moves down */
+    for(var d=0;d<dirs.length;d++){
+        var dr=dirs[d][0],dc=dirs[d][1];
+        var nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<CK_SZ&&nc>=0&&nc<CK_SZ){
+            if(ckBoard[nr][nc]===0)moves.push({fr:r,fc:c,tr:nr,tc:nc,jump:false,cap:null});
+            else{
+                var opp=(v===1||v===3)?[2,4]:[1,3];
+                if(opp.indexOf(ckBoard[nr][nc])!==-1){
+                    var jr=nr+dr,jc=nc+dc;
+                    if(jr>=0&&jr<CK_SZ&&jc>=0&&jc<CK_SZ&&ckBoard[jr][jc]===0)
+                        moves.push({fr:r,fc:c,tr:jr,tc:jc,jump:true,cap:{r:nr,c:nc}});
+                }
+            }
+        }
+    }
+    return moves;
+}
+function ckAllJumps(player){
+    var jumps=[];
+    for(var r=0;r<CK_SZ;r++)for(var c=0;c<CK_SZ;c++){
+        var v=ckBoard[r][c];
+        if((player===1&&(v===1||v===3))||(player===2&&(v===2||v===4))){
+            var m=ckGetMoves(r,c,v);
+            for(var i=0;i<m.length;i++)if(m[i].jump)jumps.push(m[i]);
+        }
+    }
+    return jumps;
+}
+function ckDoMove(mv){
+    var v=ckBoard[mv.fr][mv.fc];
+    ckBoard[mv.fr][mv.fc]=0;
+    ckBoard[mv.tr][mv.tc]=v;
+    if(mv.cap)ckBoard[mv.cap.r][mv.cap.c]=0;
+    /* king promotion */
+    if(v===1&&mv.tr===0)ckBoard[mv.tr][mv.tc]=3;
+    if(v===2&&mv.tr===CK_SZ-1)ckBoard[mv.tr][mv.tc]=4;
+}
+function ckCheckWin(){
+    var p1=0,p2=0;
+    for(var r=0;r<CK_SZ;r++)for(var c=0;c<CK_SZ;c++){
+        if(ckBoard[r][c]===1||ckBoard[r][c]===3)p1++;
+        if(ckBoard[r][c]===2||ckBoard[r][c]===4)p2++;
+    }
+    if(p1===0){ckOver=true;ckMsg="AI Wins!";}
+    if(p2===0){ckOver=true;ckMsg="You Win!";}
+}
+function ckAI(){
+    if(ckOver||currentGame!=="checkers")return;
+    /* get all moves for AI (player 2) */
+    var allMoves=[];
+    for(var r=0;r<CK_SZ;r++)for(var c=0;c<CK_SZ;c++){
+        var v=ckBoard[r][c];
+        if(v===2||v===4){var m=ckGetMoves(r,c,v);for(var i=0;i<m.length;i++)allMoves.push(m[i]);}
+    }
+    var jumps=allMoves.filter(function(m){return m.jump;});
+    var pool=jumps.length>0?jumps:allMoves;
+    if(pool.length===0){ckOver=true;ckMsg="You Win!";ckTurn=1;return;}
+    var pick=pool[Math.floor(Math.random()*pool.length)];
+    ckDoMove(pick);
+    ckCheckWin();
+    ckTurn=1;
+}
+function drwCheckers(){
+    var W=cv.width,H=cv.height;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    for(var r=0;r<CK_SZ;r++)for(var c=0;c<CK_SZ;c++){
+        ctx.fillStyle=(r+c)%2===0?"rgba(148,163,184,.12)":"rgba(71,85,105,.25)";
+        ctx.fillRect(c*ckCW,r*ckCW,ckCW,ckCW);
+        var v=ckBoard[r][c];
+        if(v>0){
+            var cx=c*ckCW+ckCW/2,cy=r*ckCW+ckCW/2;
+            ctx.beginPath();ctx.arc(cx,cy,ckCW*0.38,0,Math.PI*2);
+            ctx.fillStyle=(v===1||v===3)?"#f87171":"#475569";ctx.fill();
+            ctx.strokeStyle=(v===1||v===3)?"#fca5a5":"#64748b";ctx.lineWidth=2;ctx.stroke();
+            if(v===3||v===4){ctx.fillStyle="#fbbf24";ctx.font="700 16px Inter,sans-serif";ctx.textAlign="center";ctx.fillText("K",cx,cy+6);}
+        }
+    }
+    /* highlight selected + moves */
+    if(ckSelected){
+        ctx.strokeStyle=C1;ctx.lineWidth=3;ctx.strokeRect(ckSelected.c*ckCW+2,ckSelected.r*ckCW+2,ckCW-4,ckCW-4);
+        ctx.fillStyle="rgba(125,211,252,.2)";
+        for(var i=0;i<ckMoves.length;i++)ctx.fillRect(ckMoves[i].tc*ckCW,ckMoves[i].tr*ckCW,ckCW,ckCW);
+    }
+    ctx.textAlign="center";
+    if(ckOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-30,W,54);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText(ckMsg,W/2,H/2);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+18);}
+}
+
+/* ============================================================
+   10. CHESS (vs AI)
+   ============================================================ */
+var CH_SZ=8,chCW,chBoard,chTurn,chSelected,chMoves,chOver,chMsg;
+/* piece encoding: 0=empty, positive=white(player), negative=black(AI) */
+/* |1|=pawn |2|=rook |3|=knight |4|=bishop |5|=queen |6|=king */
+var chSymbols={1:"\u2659",2:"\u2656",3:"\u2658",4:"\u2657",5:"\u2655",6:"\u2654",
+    "-1":"\u265f","-2":"\u265c","-3":"\u265e","-4":"\u265d","-5":"\u265b","-6":"\u265a"};
+
+function initChess(){
+    cv.width=480;cv.height=480;
+    chCW=cv.width/CH_SZ;
+    hintEl.textContent="Click your piece, then click where to move \u00b7 You are white (bottom)";
+    chTurn=1;chSelected=null;chMoves=[];chOver=false;chMsg="";
+    chBoard=[
+        [-2,-3,-4,-5,-6,-4,-3,-2],
+        [-1,-1,-1,-1,-1,-1,-1,-1],
+        [0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1],
+        [2,3,4,5,6,4,3,2]
+    ];
+    cv.addEventListener("click",chessTap);
+    cv.addEventListener("touchstart",chessTap,{passive:false});
+    function run(){loopId=requestAnimationFrame(run);drwChess();}
+    run();
+}
+function chessTap(e){
+    if(e.type==="touchstart")e.preventDefault();
+    if(chOver){initChess();return;}
+    if(chTurn!==1)return;
+    var rect=cv.getBoundingClientRect();
+    var sx=rect.width/cv.width,sy=rect.height/cv.height;
+    var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
+    var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
+    var col=Math.floor(mx/chCW),row=Math.floor(my/chCW);
+    if(col<0||col>=CH_SZ||row<0||row>=CH_SZ)return;
+    if(chSelected){
+        for(var i=0;i<chMoves.length;i++){
+            if(chMoves[i].tr===row&&chMoves[i].tc===col){
+                chExec(chMoves[i]);
+                chSelected=null;chMoves=[];
+                chTurn=-1;
+                chCheckEnd();
+                if(!chOver)setTimeout(chAI,250);
+                return;
+            }
+        }
+        chSelected=null;chMoves=[];
+    }
+    if(chBoard[row][col]>0){
+        chSelected={r:row,c:col};
+        chMoves=chLegalMoves(row,col,chBoard);
+    }
+}
+function chExec(mv){
+    var v=chBoard[mv.fr][mv.fc];
+    chBoard[mv.tr][mv.tc]=v;chBoard[mv.fr][mv.fc]=0;
+    /* pawn promotion */
+    if(v===1&&mv.tr===0)chBoard[mv.tr][mv.tc]=5;
+    if(v===-1&&mv.tr===7)chBoard[mv.tr][mv.tc]=-5;
+}
+function chInBounds(r,c){return r>=0&&r<CH_SZ&&c>=0&&c<CH_SZ;}
+function chPseudoMoves(r,c,board){
+    var v=board[r][c],av=Math.abs(v),sign=v>0?1:-1,moves=[];
+    if(av===1){/* pawn */
+        var dir=sign===1?-1:1;
+        var startRow=sign===1?6:1;
+        if(chInBounds(r+dir,c)&&board[r+dir][c]===0){moves.push({fr:r,fc:c,tr:r+dir,tc:c});
+            if(r===startRow&&board[r+dir*2][c]===0)moves.push({fr:r,fc:c,tr:r+dir*2,tc:c});
+        }
+        for(var dc=-1;dc<=1;dc+=2){if(chInBounds(r+dir,c+dc)&&board[r+dir][c+dc]*sign<0)moves.push({fr:r,fc:c,tr:r+dir,tc:c+dc});}
+    }
+    if(av===2||av===5){/* rook/queen */
+        var rdirs=[[0,1],[0,-1],[1,0],[-1,0]];
+        for(var d=0;d<rdirs.length;d++){for(var s=1;s<8;s++){var nr=r+rdirs[d][0]*s,nc=c+rdirs[d][1]*s;if(!chInBounds(nr,nc))break;if(board[nr][nc]*sign>0)break;moves.push({fr:r,fc:c,tr:nr,tc:nc});if(board[nr][nc]*sign<0)break;}}
+    }
+    if(av===4||av===5){/* bishop/queen */
+        var bdirs=[[1,1],[1,-1],[-1,1],[-1,-1]];
+        for(var d2=0;d2<bdirs.length;d2++){for(var s2=1;s2<8;s2++){var nr2=r+bdirs[d2][0]*s2,nc2=c+bdirs[d2][1]*s2;if(!chInBounds(nr2,nc2))break;if(board[nr2][nc2]*sign>0)break;moves.push({fr:r,fc:c,tr:nr2,tc:nc2});if(board[nr2][nc2]*sign<0)break;}}
+    }
+    if(av===3){/* knight */
+        var kms=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+        for(var k=0;k<kms.length;k++){var kr=r+kms[k][0],kc=c+kms[k][1];if(chInBounds(kr,kc)&&board[kr][kc]*sign<=0)moves.push({fr:r,fc:c,tr:kr,tc:kc});}
+    }
+    if(av===6){/* king */
+        for(var dr=-1;dr<=1;dr++)for(var dc2=-1;dc2<=1;dc2++){if(dr===0&&dc2===0)continue;var kr2=r+dr,kc2=c+dc2;if(chInBounds(kr2,kc2)&&board[kr2][kc2]*sign<=0)moves.push({fr:r,fc:c,tr:kr2,tc:kc2});}
+    }
+    return moves;
+}
+function chIsInCheck(board,sign){
+    /* find king */
+    var kr=-1,kc=-1;
+    for(var r=0;r<CH_SZ;r++)for(var c=0;c<CH_SZ;c++)if(board[r][c]===6*sign){kr=r;kc=c;}
+    if(kr===-1)return true;
+    /* check if any opponent piece attacks king */
+    for(var r2=0;r2<CH_SZ;r2++)for(var c2=0;c2<CH_SZ;c2++){
+        if(board[r2][c2]*sign<0){
+            var pm=chPseudoMoves(r2,c2,board);
+            for(var i=0;i<pm.length;i++)if(pm[i].tr===kr&&pm[i].tc===kc)return true;
+        }
+    }
+    return false;
+}
+function chLegalMoves(r,c,board){
+    var pseudo=chPseudoMoves(r,c,board);
+    var legal=[];
+    var sign=board[r][c]>0?1:-1;
+    for(var i=0;i<pseudo.length;i++){
+        /* simulate move */
+        var bCopy=[];for(var rr2=0;rr2<CH_SZ;rr2++)bCopy[rr2]=board[rr2].slice();
+        bCopy[pseudo[i].tr][pseudo[i].tc]=bCopy[pseudo[i].fr][pseudo[i].fc];
+        bCopy[pseudo[i].fr][pseudo[i].fc]=0;
+        if(!chIsInCheck(bCopy,sign))legal.push(pseudo[i]);
+    }
+    return legal;
+}
+function chAllMoves(board,sign){
+    var all=[];
+    for(var r=0;r<CH_SZ;r++)for(var c=0;c<CH_SZ;c++){
+        if(board[r][c]*sign>0){var m=chLegalMoves(r,c,board);for(var i=0;i<m.length;i++)all.push(m[i]);}
+    }
+    return all;
+}
+function chCheckEnd(){
+    /* check if current turn player has moves */
+    var moves=chAllMoves(chBoard,chTurn);
+    if(moves.length===0){
+        chOver=true;
+        if(chIsInCheck(chBoard,chTurn))chMsg=chTurn===1?"Checkmate \u2014 AI Wins!":"Checkmate \u2014 You Win!";
+        else chMsg="Stalemate \u2014 Draw!";
+    }
+}
+var chPieceVal={1:10,2:50,3:30,4:30,5:90,6:900};
+function chEval(board){
+    var score=0;
+    for(var r=0;r<CH_SZ;r++)for(var c=0;c<CH_SZ;c++){
+        var v=board[r][c];if(v===0)continue;
+        var val=chPieceVal[Math.abs(v)]||0;
+        score+=v>0?val:-val;
+    }
+    return score;
+}
+function chAI(){
+    if(chOver||currentGame!=="chess")return;
+    var moves=chAllMoves(chBoard,-1);
+    if(moves.length===0){chCheckEnd();chTurn=1;return;}
+    /* simple 1-ply: pick move that maximises AI advantage */
+    var bestScore=Infinity,bestMoves=[];
+    for(var i=0;i<moves.length;i++){
+        var bCopy=[];for(var r=0;r<CH_SZ;r++)bCopy[r]=chBoard[r].slice();
+        bCopy[moves[i].tr][moves[i].tc]=bCopy[moves[i].fr][moves[i].fc];
+        bCopy[moves[i].fr][moves[i].fc]=0;
+        if(Math.abs(bCopy[moves[i].tr][moves[i].tc])===-1&&moves[i].tr===7)bCopy[moves[i].tr][moves[i].tc]=-5;
+        var sc=chEval(bCopy);
+        if(sc<bestScore){bestScore=sc;bestMoves=[moves[i]];}
+        else if(sc===bestScore)bestMoves.push(moves[i]);
+    }
+    var pick=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+    chExec(pick);
+    chTurn=1;
+    chCheckEnd();
+}
+function drwChess(){
+    var W=cv.width,H=cv.height;
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    for(var r=0;r<CH_SZ;r++)for(var c=0;c<CH_SZ;c++){
+        ctx.fillStyle=(r+c)%2===0?"rgba(148,163,184,.15)":"rgba(71,85,105,.3)";
+        ctx.fillRect(c*chCW,r*chCW,chCW,chCW);
+        var v=chBoard[r][c];
+        if(v!==0){
+            ctx.fillStyle=v>0?"#f1f5f9":"#64748b";
+            ctx.font="700 34px Inter,sans-serif";ctx.textAlign="center";
+            ctx.fillText(chSymbols[v.toString()]||"?",c*chCW+chCW/2,r*chCW+chCW/2+12);
+        }
+    }
+    if(chSelected){
+        ctx.strokeStyle=C1;ctx.lineWidth=3;ctx.strokeRect(chSelected.c*chCW+2,chSelected.r*chCW+2,chCW-4,chCW-4);
+        ctx.fillStyle="rgba(125,211,252,.2)";
+        for(var i=0;i<chMoves.length;i++){
+            ctx.beginPath();ctx.arc(chMoves[i].tc*chCW+chCW/2,chMoves[i].tr*chCW+chCW/2,8,0,Math.PI*2);ctx.fill();
+        }
+    }
+    /* check indicator */
+    if(!chOver&&chIsInCheck(chBoard,chTurn)){
+        for(var r2=0;r2<CH_SZ;r2++)for(var c2=0;c2<CH_SZ;c2++){
+            if(chBoard[r2][c2]===6*chTurn){ctx.strokeStyle="#f87171";ctx.lineWidth=3;ctx.strokeRect(c2*chCW+2,r2*chCW+2,chCW-4,chCW-4);}
+        }
+    }
+    ctx.textAlign="center";
+    if(chOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-30,W,54);ctx.fillStyle=TH;ctx.font="600 22px Inter,sans-serif";ctx.fillText(chMsg,W/2,H/2);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+18);}
 }
 
 })();
