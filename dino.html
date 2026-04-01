@@ -30,6 +30,13 @@
         #gameArea{display:none;width:100%;max-width:820px;padding:0 1rem 1rem;flex:1;flex-direction:column;align-items:center;justify-content:center}
         canvas{display:block;width:100%;height:auto;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.02);transition:max-width .2s}
         .hint{color:#475569;font-size:.78rem;margin-top:.7rem;text-align:center}
+        /* ---- difficulty controls ---- */
+        #difficultyPanel{display:none;margin-top:.8rem;text-align:center}
+        .diff-label{font-size:.85rem;color:#94a3b8;margin-right:1rem;margin-bottom:.5rem}
+        .diff-buttons{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+        .diff-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#94a3b8;padding:.5rem 1.2rem;font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .2s}
+        .diff-btn:hover{background:rgba(125,211,252,.12);border-color:rgba(125,211,252,.3);color:#f1f5f9}
+        .diff-btn.active{background:rgba(125,211,252,.25);border-color:rgba(125,211,252,.5);color:#7dd3fc}
     </style>
 </head>
 <body>
@@ -110,6 +117,14 @@
 <!-- =========== GAME AREA =========== -->
 <div id="gameArea">
     <canvas id="cv" width="800" height="260"></canvas>
+    <div id="difficultyPanel">
+        <div class="diff-label">Difficulty:</div>
+        <div class="diff-buttons">
+            <button class="diff-btn" data-diff="0" onclick="setDifficulty(0)">Easy</button>
+            <button class="diff-btn" data-diff="1" onclick="setDifficulty(1)">Medium</button>
+            <button class="diff-btn" data-diff="2" onclick="setDifficulty(2)">Hard</button>
+        </div>
+    </div>
     <p class="hint" id="hint"></p>
 </div>
 
@@ -223,6 +238,14 @@ function drwTrail(){for(var i=0;i<trails.length;i++){var t=trails[i];ctx.globalA
 /* ============================================================
    LAUNCH / MENU
    ============================================================ */
+var diffPanel = document.getElementById("difficultyPanel");
+window.setDifficulty = function(level){
+    if(currentGame==="chess"){chDiff=level;}
+    if(currentGame==="connect5"){g5Diff=level;}
+    var btns=diffPanel.querySelectorAll(".diff-btn");
+    for(var i=0;i<btns.length;i++)btns[i].classList.remove("active");
+    document.querySelector(".diff-btn[data-diff='" + level + "']").classList.add("active");
+};
 window.launch = function(name){
     menuEl.style.display="none";
     areaEl.style.display="flex";
@@ -231,16 +254,17 @@ window.launch = function(name){
     currentGame=name;
     paused=false;speedMult=1;speedUserSet=false;speedLastInc=performance.now();trails=[];
     cv.style.maxWidth="";
+    diffPanel.style.display="none";
     if(name==="dino")  initDino();
     if(name==="snake") initSnake();
     if(name==="pong")  initPong();
-    if(name==="tetris"){cv.style.maxWidth="420px";initTetris();}
+    if(name==="tetris") initTetris();
     if(name==="clicker"){cv.style.maxWidth="480px";initClicker();}
     if(name==="tower") initTower();
     if(name==="ttt"){cv.style.maxWidth="420px";initTTT();}
     if(name==="pacman") initPacman();
-    if(name==="connect5"){cv.style.maxWidth="480px";initConnect5();}
-    if(name==="chess"){cv.style.maxWidth="480px";initChess();}
+    if(name==="connect5"){cv.style.maxWidth="480px";diffPanel.style.display="block";initConnect5();}
+    if(name==="chess"){cv.style.maxWidth="480px";diffPanel.style.display="block";initChess();}
     if(name==="hideseek"){cv.style.maxWidth="640px";initHideSeek();}
 };
 
@@ -251,6 +275,7 @@ window.showMenu = function(){
     areaEl.style.display="none";
     menuEl.style.display="flex";
     menuBtn.style.display="none";
+    diffPanel.style.display="none";
     document.removeEventListener("keydown",dinoJump);
     cv.removeEventListener("click",dinoTap);
     cv.removeEventListener("touchstart",dinoTap);
@@ -544,11 +569,11 @@ var T_SHAPES=[
 var T_COLORS=[C1,C2,C3,"#fbbf24","#34d399","#fb923c","#f87171"];
 
 function initTetris(){
-    cv.width=420;cv.height=480;
+    cv.width=350;cv.height=480;
     tCW=30;tCH=24;
     hintEl.textContent="\u2190 \u2192 move \u00b7 \u2191 rotate \u00b7 \u2193 soft drop \u00b7 Space hard drop \u00b7 C hold";
     tBoard=[];for(var r=0;r<T_ROWS;r++){tBoard[r]=[];for(var c=0;c<T_COLS;c++)tBoard[r][c]=0;}
-    tScore=0;tLines=0;tLevel=1;tOver=false;tStarted=false;tTick=0;tSpeed=30;tHold=null;tCanHold=true;tSub=false;clearFX();initStars(420,480,20);
+    tScore=0;tLines=0;tLevel=1;tOver=false;tStarted=false;tTick=0;tSpeed=30;tHold=null;tCanHold=true;tSub=false;clearFX();initStars(350,480,20);
     tNext=rndPiece();spawnPiece();
     cv.addEventListener("click",tetrisTap);
     cv.addEventListener("touchstart",tetrisTap,{passive:false});
@@ -599,7 +624,7 @@ function updTetris(){
     else lock();
 }
 function drwTetris(){
-    var W=cv.width,H=cv.height,bx=50;
+    var W=cv.width,H=cv.height,bx=5;
     ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);drwStars();
     /* grid */
     ctx.strokeStyle="rgba(255,255,255,.04)";ctx.lineWidth=1;
@@ -614,20 +639,21 @@ function drwTetris(){
     ctx.globalAlpha=1;
     /* current piece */
     for(var r3=0;r3<tCur.shape.length;r3++)for(var c3=0;c3<tCur.shape[r3].length;c3++){if(tCur.shape[r3][c3]){ctx.fillStyle=tCur.color;rr(bx+(tX+c3)*tCW+1,(tY+r3)*tCH+1,tCW-2,tCH-2,3);}}
-    /* HUD overlay */
-    ctx.fillStyle="rgba(15,23,42,.6)";rr(W-105,6,100,70,8);
-    ctx.fillStyle=TXT;ctx.font="600 11px Inter,sans-serif";ctx.textAlign="left";
-    ctx.fillText("Score: "+tScore,W-98,24);
-    ctx.fillText("Lines: "+tLines,W-98,40);
-    ctx.fillText("Level: "+tLevel,W-98,56);
-    if(tBest>0)ctx.fillText("Best: "+tBest,W-98,72);
-    drwMini(tNext,6,10,"Next");
-    drwMini(tHold===null?null:fromId(tHold),6,106,"Hold");
+    /* Left side: Next and Hold mini grids */
+    drwMini(tNext,305,6,"Next");
+    drwMini(tHold===null?null:fromId(tHold),305,100,"Hold");
+    /* Right side: HUD overlay (compact) */
+    ctx.fillStyle="rgba(15,23,42,.6)";rr(305,200,40,90,6);
+    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.textAlign="left";
+    ctx.fillText("Score",309,214);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tScore,309,224);
+    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Lines",309,236);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tLines,309,246);
+    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Level",309,258);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tLevel,309,268);
+    if(tBest>0){ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Best",309,280);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tBest,309,290);}
     /* messages */
     ctx.textAlign="center";
     if(!tStarted){ctx.fillStyle=TH;ctx.font="600 18px Inter,sans-serif";ctx.fillText("Click to Start",W/2,H/2);}
     if(tOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-40,W,70);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText("Game Over",W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to Restart",W/2,H/2+16);if(!tSub){submitRank("tetris",tScore,"high");tSub=true;}}
-    drwRanks("tetris",W-120,82,112);
+    drwRanks("tetris",305,310,40);
 }
 
 /* ============================================================
@@ -1093,7 +1119,8 @@ function initConnect5(){
     g5CW=cv.width/G5_SZ;
     hintEl.textContent="You are Black \u00b7 Click intersection to place \u00b7 5 in a row wins";
     g5Board=[];for(var r=0;r<G5_SZ;r++){g5Board[r]=[];for(var c=0;c<G5_SZ;c++)g5Board[r][c]=0;}
-    g5Turn=1;g5Over=false;g5Msg="";g5WinCells=null;g5LastMove=null;g5Anims=[];g5Sub=false;clearFX();initStars(480,480,15);
+    g5Turn=1;g5Over=false;g5Msg="";g5WinCells=null;g5LastMove=null;g5Anims=[];g5Sub=false;g5Diff=1;clearFX();initStars(480,480,15);
+    setDifficulty(g5Diff);
     cv.addEventListener("click",connect5Tap);
     cv.addEventListener("touchstart",connect5Tap,{passive:false});
     function run(){loopId=requestAnimationFrame(run);updPart();updFloat();drwConnect5();drwPart();drwFloat();if(paused)drwPause();}
@@ -1108,7 +1135,6 @@ function connect5Tap(e){
     var sx=rect.width/cv.width,sy=rect.height/cv.height;
     var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
     var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
-    if(my<28){if(mx<160)g5Diff=0;else if(mx<320)g5Diff=1;else g5Diff=2;return;}
     var col=Math.round((mx-g5CW/2)/g5CW),row=Math.round((my-g5CW/2)/g5CW);
     if(col<0||col>=G5_SZ||row<0||row>=G5_SZ)return;
     if(g5Board[row][col]!==0)return;
@@ -1245,11 +1271,6 @@ function drwConnect5(){
             ctx.beginPath();ctx.arc(g5CW/2+wc.c*g5CW,g5CW/2+wc.r*g5CW,g5CW*0.38,0,Math.PI*2);ctx.stroke();
         }
     }
-    ctx.fillStyle="rgba(15,23,42,.72)";rr(8,4,464,22,8);
-    ctx.textAlign="center";ctx.font="600 11px Inter,sans-serif";
-    ctx.fillStyle=g5Diff===0?TH:TXT;ctx.fillText("Easy",80,19);
-    ctx.fillStyle=g5Diff===1?TH:TXT;ctx.fillText("Medium",240,19);
-    ctx.fillStyle=g5Diff===2?TH:TXT;ctx.fillText("Hard",400,19);
     ctx.textAlign="center";
     if(g5Over){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-30,W,54);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText(g5Msg,W/2,H/2);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+18);if(!g5Sub&&g5Msg!=="AI Wins!"){submitRank("connect5",g5Msg==="You Win!"?1:0,"high");g5Sub=true;}}
     drwRanks("connect5",350,28,122);
@@ -1258,7 +1279,7 @@ function drwConnect5(){
 /* ============================================================
    10. HIDE & SEEK (2D)
    ============================================================ */
-var hsCols=20,hsRows=15,hsCW,hsCH,hsMap,hsP,hsS,hsTargets,hsStarted,hsOver,hsWin,hsTimer,hsScore,hsSub=false;
+var hsCols=20,hsRows=15,hsCW,hsCH,hsMap,hsP,hsS,hsTargets,hsStarted,hsOver,hsWin,hsTimer,hsScore,hsSub=false,hsMvTick=0;
 function initHideSeek(){
     cv.width=640;cv.height=480;hsCW=cv.width/hsCols;hsCH=cv.height/hsRows;
     hintEl.textContent="Arrow keys/WASD to move · touch all hide zones before seeker catches you";
@@ -1266,7 +1287,7 @@ function initHideSeek(){
     for(var i=0;i<hsRows;i++){hsMap[i][0]=hsMap[i][hsCols-1]=1;}for(var j=0;j<hsCols;j++){hsMap[0][j]=hsMap[hsRows-1][j]=1;}
     hsP={x:1,y:1};hsS={x:hsCols-2,y:hsRows-2,dir:{x:-1,y:0},tick:0};hsTargets=[];
     for(var t=0;t<6;t++){var tx=2+Math.floor(Math.random()*(hsCols-4)),ty=2+Math.floor(Math.random()*(hsRows-4));if(hsMap[ty][tx]===0&&(tx!==1||ty!==1))hsTargets.push({x:tx,y:ty,hit:false});}
-    hsMap[1][1]=0;hsMap[hsRows-2][hsCols-2]=0;hsStarted=false;hsOver=false;hsWin=false;hsTimer=1800;hsScore=0;hsSub=false;clearFX();initStars(640,480,25);
+    hsMap[1][1]=0;hsMap[hsRows-2][hsCols-2]=0;hsStarted=false;hsOver=false;hsWin=false;hsTimer=1800;hsScore=0;hsSub=false;hsMvTick=0;clearFX();initStars(640,480,25);
     cv.addEventListener("click",hsTap);cv.addEventListener("touchstart",hsTap,{passive:false});
     function run(){loopId=requestAnimationFrame(run);if(!paused){updHideSeek();updPart();updFloat();updShake();}applyShake();drwHideSeek();drwPart();drwFloat();endShake();drwFlash();drwSpeed();if(paused)drwPause();}
     run();
@@ -1276,9 +1297,15 @@ function hsCan(x,y){return x>=0&&x<hsCols&&y>=0&&y<hsRows&&hsMap[y][x]===0;}
 function updHideSeek(){
     if(!hsStarted||hsOver)return;
     updSpeed();
-    var mvx=(keys["ArrowRight"]||keys["KeyD"]?1:0)-(keys["ArrowLeft"]||keys["KeyA"]?1:0);
-    var mvy=(keys["ArrowDown"]||keys["KeyS"]?1:0)-(keys["ArrowUp"]||keys["KeyW"]?1:0);
-    if(mvx!==0||mvy!==0){var nx=hsP.x+(mvx?mvx:0),ny=hsP.y+(mvy?mvy:0);if(hsCan(nx,ny)){hsP.x=nx;hsP.y=ny;}}
+    /* Player movement with speed control */
+    hsMvTick++;
+    var mvSpeed=Math.max(3,Math.floor(10/speedMult));
+    if(hsMvTick>=mvSpeed){
+        hsMvTick=0;
+        var mvx=(keys["ArrowRight"]||keys["KeyD"]?1:0)-(keys["ArrowLeft"]||keys["KeyA"]?1:0);
+        var mvy=(keys["ArrowDown"]||keys["KeyS"]?1:0)-(keys["ArrowUp"]||keys["KeyW"]?1:0);
+        if(mvx!==0||mvy!==0){var nx=hsP.x+(mvx?mvx:0),ny=hsP.y+(mvy?mvy:0);if(hsCan(nx,ny)){hsP.x=nx;hsP.y=ny;}}
+    }
     hsTickSeeker();
     for(var i=0;i<hsTargets.length;i++)if(!hsTargets[i].hit&&hsTargets[i].x===hsP.x&&hsTargets[i].y===hsP.y){hsTargets[i].hit=true;addPart(hsP.x*hsCW+hsCW/2,hsP.y*hsCH+hsCH/2,"#34d399",12,3,25);}
     if(hsP.x===hsS.x&&hsP.y===hsS.y){hsOver=true;hsWin=false;startShake(8,14);startFlash("#f87171",.2);}    
@@ -1331,6 +1358,8 @@ function initChess(){
         [1,1,1,1,1,1,1,1],
         [2,3,4,5,6,4,3,2]
     ];
+    chDiff=1;
+    setDifficulty(chDiff);
     cv.addEventListener("click",chessTap);
     cv.addEventListener("touchstart",chessTap,{passive:false});
     function run(){loopId=requestAnimationFrame(run);updPart();updFloat();drwChess();drwPart();drwFloat();if(paused)drwPause();}
@@ -1345,7 +1374,6 @@ function chessTap(e){
     var sx=rect.width/cv.width,sy=rect.height/cv.height;
     var mx=(e.type==="touchstart"?(e.touches[0].clientX-rect.left)/sx:(e.clientX-rect.left)/sx);
     var my=(e.type==="touchstart"?(e.touches[0].clientY-rect.top)/sy:(e.clientY-rect.top)/sy);
-    if(my<28){if(mx<160)chDiff=0;else if(mx<320)chDiff=1;else chDiff=2;return;}
     var col=Math.floor(mx/chCW),row=Math.floor(my/chCW);
     if(col<0||col>=CH_SZ||row<0||row>=CH_SZ)return;
     if(chSelected){
@@ -1538,10 +1566,6 @@ function drwChess(){
             if(chBoard[r2][c2]===6*chTurn){ctx.strokeStyle="#f87171";ctx.lineWidth=3;ctx.strokeRect(c2*chCW+2,r2*chCW+2,chCW-4,chCW-4);}
         }
     }
-    ctx.fillStyle="rgba(15,23,42,.72)";rr(8,4,464,22,8);ctx.textAlign="center";ctx.font="600 11px Inter,sans-serif";
-    ctx.fillStyle=chDiff===0?TH:TXT;ctx.fillText("Easy",80,19);
-    ctx.fillStyle=chDiff===1?TH:TXT;ctx.fillText("Medium",240,19);
-    ctx.fillStyle=chDiff===2?TH:TXT;ctx.fillText("Hard",400,19);
     ctx.textAlign="center";
     if(chOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-30,W,54);ctx.fillStyle=TH;ctx.font="600 22px Inter,sans-serif";ctx.fillText(chMsg,W/2,H/2);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+18);if(!chSub&&chMsg.indexOf("You Win")!==-1){submitRank("chess",1,"high");chSub=true;}}
     drwRanks("chess",350,28,122);
