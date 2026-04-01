@@ -569,11 +569,11 @@ var T_SHAPES=[
 var T_COLORS=[C1,C2,C3,"#fbbf24","#34d399","#fb923c","#f87171"];
 
 function initTetris(){
-    cv.width=350;cv.height=480;
+    cv.width=450;cv.height=480;
     tCW=30;tCH=24;
     hintEl.textContent="\u2190 \u2192 move \u00b7 \u2191 rotate \u00b7 \u2193 soft drop \u00b7 Space hard drop \u00b7 C hold";
     tBoard=[];for(var r=0;r<T_ROWS;r++){tBoard[r]=[];for(var c=0;c<T_COLS;c++)tBoard[r][c]=0;}
-    tScore=0;tLines=0;tLevel=1;tOver=false;tStarted=false;tTick=0;tSpeed=30;tHold=null;tCanHold=true;tSub=false;clearFX();initStars(350,480,20);
+    tScore=0;tLines=0;tLevel=1;tOver=false;tStarted=false;tTick=0;tSpeed=30;tHold=null;tCanHold=true;tSub=false;clearFX();initStars(450,480,20);
     tNext=rndPiece();spawnPiece();
     cv.addEventListener("click",tetrisTap);
     cv.addEventListener("touchstart",tetrisTap,{passive:false});
@@ -639,21 +639,21 @@ function drwTetris(){
     ctx.globalAlpha=1;
     /* current piece */
     for(var r3=0;r3<tCur.shape.length;r3++)for(var c3=0;c3<tCur.shape[r3].length;c3++){if(tCur.shape[r3][c3]){ctx.fillStyle=tCur.color;rr(bx+(tX+c3)*tCW+1,(tY+r3)*tCH+1,tCW-2,tCH-2,3);}}
-    /* Left side: Next and Hold mini grids */
-    drwMini(tNext,305,6,"Next");
-    drwMini(tHold===null?null:fromId(tHold),305,100,"Hold");
-    /* Right side: HUD overlay (compact) */
-    ctx.fillStyle="rgba(15,23,42,.6)";rr(305,200,40,90,6);
-    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.textAlign="left";
-    ctx.fillText("Score",309,214);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tScore,309,224);
-    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Lines",309,236);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tLines,309,246);
-    ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Level",309,258);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tLevel,309,268);
-    if(tBest>0){ctx.fillStyle=TXT;ctx.font="500 9px Inter,sans-serif";ctx.fillText("Best",309,280);ctx.fillStyle=TH;ctx.font="600 10px Inter,sans-serif";ctx.fillText(tBest,309,290);}
+    /* Right side UI: Next and Hold mini grids */
+    drwMini(tNext,315,6,"Next");
+    drwMini(tHold===null?null:fromId(tHold),315,100,"Hold");
+    /* HUD overlay (Score, Lines, Level, Best) */
+    ctx.fillStyle="rgba(15,23,42,.7)";rr(315,200,120,105,8);
+    ctx.fillStyle=TH;ctx.font="600 12px Inter,sans-serif";ctx.textAlign="left";
+    ctx.fillText("Score",325,220);ctx.fillStyle=TXT;ctx.font="400 11px Inter,sans-serif";ctx.fillText(tScore,325,234);
+    ctx.fillStyle=TH;ctx.font="600 12px Inter,sans-serif";ctx.fillText("Lines",325,252);ctx.fillStyle=TXT;ctx.font="400 11px Inter,sans-serif";ctx.fillText(tLines,325,266);
+    ctx.fillStyle=TH;ctx.font="600 12px Inter,sans-serif";ctx.fillText("Level",325,284);ctx.fillStyle=TXT;ctx.font="400 11px Inter,sans-serif";ctx.fillText(tLevel,325,298);
+    if(tBest>0){ctx.fillStyle=TH;ctx.font="600 12px Inter,sans-serif";ctx.fillText("Best",325,316);ctx.fillStyle=TXT;ctx.font="400 11px Inter,sans-serif";ctx.fillText(tBest,325,330);}
     /* messages */
     ctx.textAlign="center";
     if(!tStarted){ctx.fillStyle=TH;ctx.font="600 18px Inter,sans-serif";ctx.fillText("Click to Start",W/2,H/2);}
     if(tOver){ctx.fillStyle="rgba(15,23,42,.7)";ctx.fillRect(0,H/2-40,W,70);ctx.fillStyle=TH;ctx.font="600 24px Inter,sans-serif";ctx.fillText("Game Over",W/2,H/2-10);ctx.fillStyle=TXT;ctx.font="400 13px Inter,sans-serif";ctx.fillText("Click to Restart",W/2,H/2+16);if(!tSub){submitRank("tetris",tScore,"high");tSub=true;}}
-    drwRanks("tetris",305,310,40);
+    drwRanks("tetris",315,320,120);
 }
 
 /* ============================================================
