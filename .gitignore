@@ -14,3 +14,34 @@ Thumbs.db
 *~
 
 *.md
+
+# Secrets and runtime config (local only)
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Local databases / caches
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+data/
+cache/
+
+# Local exports and debug traces
+logs/
+*.log
+score-export*.json
+rl-export*.json
+
+# Server-only runtime artifacts
+server/node_modules/
+server/data/
+server/logs/
+server/.env
+server/.env.local
+server/.env.production
+server/.env.development
+server/
