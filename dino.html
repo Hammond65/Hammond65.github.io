@@ -1439,27 +1439,99 @@ function drwConnect5(){
 /* ============================================================
    10. HIDE & SEEK (2D)
    ============================================================ */
-var hsCols=20,hsRows=15,hsCW,hsCH,hsMap,hsP,hsS,hsTargets,hsStarted,hsOver,hsWin,hsTimer,hsScore,hsSub=false,hsInputLatch={};
+var hsCols=20,hsRows=15,hsCW,hsCH,hsMap,hsP,hsS,hsTargets,hsStarted,hsOver,hsWin,hsTimer,hsScore,hsSub=false,hsInputLatch={},hsRound=0,hsLevel=1;
+function hsBfsFrom(map,sx,sy){
+    var q=[[sx,sy]],head=0;
+    var seen=[];for(var r=0;r<hsRows;r++){seen[r]=[];for(var c=0;c<hsCols;c++)seen[r][c]=-1;}
+    seen[sy][sx]=0;
+    var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(head<q.length){
+        var cur=q[head++],cx=cur[0],cy=cur[1];
+        for(var i=0;i<dirs.length;i++){
+            var nx=cx+dirs[i][0],ny=cy+dirs[i][1];
+            if(nx<0||nx>=hsCols||ny<0||ny>=hsRows)continue;
+            if(map[ny][nx]!==0||seen[ny][nx]!==-1)continue;
+            seen[ny][nx]=seen[cy][cx]+1;
+            q.push([nx,ny]);
+        }
+    }
+    return seen;
+}
+function hsBuildMap(level){
+    var wallChance=Math.min(0.26,0.08+level*0.012);
+    var targetCount=Math.min(10,5+Math.floor(level/2));
+    for(var attempt=0;attempt<42;attempt++){
+        var map=[];
+        for(var r=0;r<hsRows;r++){
+            map[r]=[];
+            for(var c=0;c<hsCols;c++)map[r][c]=(Math.random()<wallChance?1:0);
+        }
+        for(var i=0;i<hsRows;i++){map[i][0]=1;map[i][hsCols-1]=1;}
+        for(var j=0;j<hsCols;j++){map[0][j]=1;map[hsRows-1][j]=1;}
+        map[1][1]=0;
+
+        /* carve winding tunnels for depth */
+        var wx=1,wy=1;
+        for(var carve=0;carve<220+level*24;carve++){
+            map[wy][wx]=0;
+            var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+            var dsel=dirs[Math.floor(Math.random()*dirs.length)];
+            var nx=Math.min(hsCols-2,Math.max(1,wx+dsel[0]));
+            var ny=Math.min(hsRows-2,Math.max(1,wy+dsel[1]));
+            wx=nx;wy=ny;
+            map[wy][wx]=0;
+        }
+
+        var dist=hsBfsFrom(map,1,1),cells=[];
+        for(var rr=1;rr<hsRows-1;rr++)for(var cc=1;cc<hsCols-1;cc++)if(dist[rr][cc]>=0)cells.push({x:cc,y:rr,d:dist[rr][cc]});
+        if(cells.length<targetCount+4)continue;
+
+        cells.sort(function(a,b){return b.d-a.d;});
+        var seeker=cells[0];
+        if(!seeker||seeker.d<6)continue;
+
+        var pool=[];
+        for(var pi=0;pi<cells.length;pi++)if(cells[pi].d>=3&&(cells[pi].x!==seeker.x||cells[pi].y!==seeker.y))pool.push(cells[pi]);
+        if(pool.length<targetCount)continue;
+
+        var targets=[];
+        for(var t=0;t<targetCount&&pool.length;t++){
+            var pickIdx=Math.floor(Math.random()*Math.min(pool.length,Math.max(6,Math.floor(pool.length*0.45))));
+            var pick=pool.splice(pickIdx,1)[0];
+            targets.push({x:pick.x,y:pick.y,hit:false});
+        }
+        if(targets.length>=Math.max(5,targetCount-1))return{map:map,seeker:seeker,targets:targets};
+    }
+
+    /* fallback guaranteed map */
+    var fb=[];
+    for(var r2=0;r2<hsRows;r2++){fb[r2]=[];for(var c2=0;c2<hsCols;c2++)fb[r2][c2]=0;}
+    for(var i2=0;i2<hsRows;i2++){fb[i2][0]=1;fb[i2][hsCols-1]=1;}
+    for(var j2=0;j2<hsCols;j2++){fb[0][j2]=1;fb[hsRows-1][j2]=1;}
+    var tgs=[];
+    for(var k=0;k<6;k++)tgs.push({x:2+k*2,y:2+(k%2)*4,hit:false});
+    return{map:fb,seeker:{x:hsCols-2,y:hsRows-2,d:20},targets:tgs};
+}
 function initHideSeek(){
     cv.width=640;cv.height=480;hsCW=cv.width/hsCols;hsCH=cv.height/hsRows;
-    hintEl.textContent="Arrow keys/WASD to move · touch all hide zones before seeker catches you";
-    hsMap=[];for(var r=0;r<hsRows;r++){hsMap[r]=[];for(var c=0;c<hsCols;c++)hsMap[r][c]=(Math.random()<0.11?1:0);}    
-    for(var i=0;i<hsRows;i++){hsMap[i][0]=hsMap[i][hsCols-1]=1;}for(var j=0;j<hsCols;j++){hsMap[0][j]=hsMap[hsRows-1][j]=1;}
+    hsRound++;hsLevel=Math.min(14,hsRound);
+    hintEl.textContent="Arrow keys/WASD to slide · touch all zones · Lv "+hsLevel;
+    var built=hsBuildMap(hsLevel);
+    hsMap=built.map;
     hsP={
         gx:1,gy:1,
         x:1*hsCW+hsCW/2,y:1*hsCH+hsCH/2,
         tx:1*hsCW+hsCW/2,ty:1*hsCH+hsCH/2,
-        speed:2.2,moving:false
+        speed:2.8,moving:false
     };
     hsS={
-        cx:hsCols-2,cy:hsRows-2,
-        x:(hsCols-2)*hsCW+hsCW/2,y:(hsRows-2)*hsCH+hsCH/2,
-        tx:(hsCols-2)*hsCW+hsCW/2,ty:(hsRows-2)*hsCH+hsCH/2,
-        speed:1.2,tick:0
+        cx:built.seeker.x,cy:built.seeker.y,
+        x:built.seeker.x*hsCW+hsCW/2,y:built.seeker.y*hsCH+hsCH/2,
+        tx:built.seeker.x*hsCW+hsCW/2,ty:built.seeker.y*hsCH+hsCH/2,
+        speed:Math.min(2.1,1.2+hsLevel*0.06),tick:0
     };
-    hsTargets=[];
-    for(var t=0;t<6;t++){var tx=2+Math.floor(Math.random()*(hsCols-4)),ty=2+Math.floor(Math.random()*(hsRows-4));if(hsMap[ty][tx]===0&&(tx!==1||ty!==1))hsTargets.push({x:tx,y:ty,hit:false});}
-    hsMap[1][1]=0;hsMap[hsRows-2][hsCols-2]=0;hsStarted=false;hsOver=false;hsWin=false;hsTimer=1800;hsScore=0;hsSub=false;hsInputLatch={};clearFX();initStars(640,480,25);
+    hsTargets=built.targets;
+    hsStarted=false;hsOver=false;hsWin=false;hsTimer=Math.max(900,1800-hsLevel*45);hsScore=0;hsSub=false;hsInputLatch={};clearFX();initStars(640,480,25);
     cv.addEventListener("click",hsTap);cv.addEventListener("touchstart",hsTap,{passive:false});
     function run(){loopId=requestAnimationFrame(run);if(!paused){updHideSeek();updPart();updFloat();updShake();}applyShake();drwHideSeek();drwPart();drwFloat();endShake();drwFlash();drwSpeed();if(paused)drwPause();}
     run();
@@ -1520,15 +1592,25 @@ function hsTickSeeker(){
         hsS.tick++;
         if(hsS.tick<Math.max(2,Math.floor(8/speedMult)))return;
         hsS.tick=0;
-        var dirs=[[1,0],[-1,0],[0,1],[0,-1]],best=null,bd=1e9;
-        for(var i=0;i<dirs.length;i++){
-            var nx=hsS.cx+dirs[i][0],ny=hsS.cy+dirs[i][1];
-            if(!hsCan(nx,ny))continue;
-            var d=Math.abs(nx-hsP.gx)+Math.abs(ny-hsP.gy);
-            if(d<bd){bd=d;best=dirs[i];}
+        /* BFS shortest path to avoid getting stuck */
+        var q=[[hsS.cx,hsS.cy]],head=0;
+        var seen=[];for(var r=0;r<hsRows;r++){seen[r]=[];for(var c=0;c<hsCols;c++)seen[r][c]=0;}
+        var prev=[];for(var rr=0;rr<hsRows;rr++){prev[rr]=[];for(var cc=0;cc<hsCols;cc++)prev[rr][cc]=null;}
+        seen[hsS.cy][hsS.cx]=1;
+        var dirs=[[1,0],[-1,0],[0,1],[0,-1]],goal=[hsP.gx,hsP.gy],found=false;
+        while(head<q.length){
+            var cur=q[head++],cx=cur[0],cy=cur[1];
+            if(cx===goal[0]&&cy===goal[1]){found=true;break;}
+            for(var i=0;i<dirs.length;i++){
+                var nx=cx+dirs[i][0],ny=cy+dirs[i][1];
+                if(!hsCan(nx,ny)||seen[ny][nx])continue;
+                seen[ny][nx]=1;prev[ny][nx]=[cx,cy];q.push([nx,ny]);
+            }
         }
-        if(best){
-            hsS.cx+=best[0];hsS.cy+=best[1];
+        if(found){
+            var step=[goal[0],goal[1]];
+            while(prev[step[1]][step[0]]&&(prev[step[1]][step[0]][0]!==hsS.cx||prev[step[1]][step[0]][1]!==hsS.cy))step=prev[step[1]][step[0]];
+            hsS.cx=step[0];hsS.cy=step[1];
             hsS.tx=hsS.cx*hsCW+hsCW/2;
             hsS.ty=hsS.cy*hsCH+hsCH/2;
         }
@@ -1549,7 +1631,7 @@ function drwHideSeek(){
     ctx.fillStyle="#ef4444";rr(hsS.x-hsCW/2+4,hsS.y-hsCH/2+4,hsCW-8,hsCH-8,5);
     ctx.fillStyle=TXT;ctx.font="600 12px Inter,sans-serif";ctx.textAlign="left";
     var done=0;for(var t=0;t<hsTargets.length;t++)if(hsTargets[t].hit)done++;
-    ctx.fillText("Zones: "+done+"/"+hsTargets.length+"  Time: "+Math.max(0,Math.floor(hsTimer/30)),8,18);
+    ctx.fillText("Lv "+hsLevel+"  Zones: "+done+"/"+hsTargets.length+"  Time: "+Math.max(0,Math.floor(hsTimer/30)),8,18);
     if(!hsStarted){ctx.fillStyle=TH;ctx.font="600 22px Inter,sans-serif";ctx.textAlign="center";ctx.fillText("Click to Start",W/2,H/2);}    
     if(hsOver){ctx.fillStyle="rgba(15,23,42,.72)";ctx.fillRect(0,H/2-34,W,64);ctx.fillStyle=hsWin?"#34d399":"#f87171";ctx.font="600 24px Inter,sans-serif";ctx.textAlign="center";ctx.fillText(hsWin?"You Escaped!":"Caught!",W/2,H/2-6);ctx.fillStyle=TXT;ctx.font="400 12px Inter,sans-serif";ctx.fillText("Click to play again",W/2,H/2+16);if(hsWin&&!hsSub){submitRank("hideseek",hsScore,"high");hsSub=true;}}
     drwRanks("hideseek",W-140,6,132);
